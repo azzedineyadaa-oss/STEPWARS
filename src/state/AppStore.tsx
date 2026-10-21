@@ -5,15 +5,26 @@ import { AppState } from 'react-native';
 import * as api from '@/lib/api';
 import {
   DEMO_FRIENDS,
+  DEMO_RIVALS,
+  ME_ID,
   addDays,
+  computeStreak,
   demoHistory,
-  generateFriendCode,
+  demoTeamSteps,
+  generateCode,
+  memberContribution,
   recordSteps,
   toDayKey,
+  weekDays,
+  weekStart,
   type Challenge,
   type DayKey,
   type Friend,
   type StepHistory,
+  type Streak,
+  type Team,
+  type TeamMember,
+  type TeamStanding,
 } from '@/lib/game';
 import { pendingUploads } from '@/lib/remote';
 import { supabase } from '@/lib/supabase';
@@ -36,14 +47,28 @@ export type Mode = 'demo' | 'online';
 
 export type SyncState = { status: 'connecting' | 'ok' } | { status: 'error'; message: string };
 
+export type Settings = {
+  /** Écrans d'accueil du premier lancement terminés. */
+  onboarded: boolean;
+  /** Heure du rappel quotidien (0-23), ou null si désactivé. */
+  reminderHour: number | null;
+};
+
 type PersistedState = {
   profile: Profile;
+  settings: Settings;
+  /** Dernier jour où l'objectif atteint a été fêté (une seule fois par jour). */
+  celebratedDay: DayKey | null;
   friends: Friend[];
   challenges: Challenge[];
   /** Mes pas par jour, mesurés sur ce téléphone ou restaurés du serveur. */
   history: StepHistory;
-  /** En ligne : pas des amis, et derniers totaux envoyés au serveur. */
-  friendSteps: Record<string, StepHistory>;
+  /** Mon équipe, ses membres et le classement des équipes de la semaine (en ligne). */
+  team: Team | null;
+  teamMembers: TeamMember[];
+  teamBoard: TeamStanding[];
+  /** En ligne : pas des amis et coéquipiers, et derniers totaux envoyés au serveur. */
+  playerSteps: Record<string, StepHistory>;
   uploaded: StepHistory;
   /** Compte auquel appartiennent les données en cache. */
   accountId: string | null;
@@ -55,6 +80,13 @@ type AppStore = PersistedState & {
   ready: boolean;
   today: DayKey;
   todaySteps: number;
+  /** Mon identifiant de joueur (ME_ID en démo). */
+  myId: string;
+  streak: Streak;
+  /** Jours de la guerre en cours (lundi-dimanche). */
+  warDays: DayKey[];
+  /** Classement des équipes de la semaine, mon équipe comprise, non trié. */
+  teamStandings: TeamStanding[];
   pedometer: PedometerState;
   updateProfile: (patch: Partial<Omit<Profile, 'friendCode'>>) => void;
   /** En ligne : `input` est le code ami. En démo : le nom de l'ami. */
@@ -62,24 +94,36 @@ type AppStore = PersistedState & {
   removeFriend: (id: string) => Promise<void>;
   createChallenge: (opponentId: string, days: number) => Promise<Challenge>;
   deleteChallenge: (id: string) => Promise<void>;
+  createTeam: (name: string, emoji: string) => Promise<Team>;
+  joinTeam: (code: string) => Promise<Team>;
+  leaveTeam: () => Promise<void>;
+  reportTeam: (id: string) => Promise<void>;
+  completeOnboarding: () => void;
+  setReminderHour: (hour: number | null) => void;
+  markCelebrated: () => void;
   /** Supprime le compte et toutes ses données (en ligne uniquement). */
   deleteAccount: () => Promise<void>;
   refresh: () => Promise<void>;
   /** Après une erreur : rouvre la session si besoin, sinon rafraîchit. */
   retry: () => void;
-  /** Historique de pas d'un ami sur les jours demandés (simulé en mode démo). */
-  friendHistory: (friendId: string, days: DayKey[]) => StepHistory;
+  /** Historique de pas d'un autre joueur (ami ou coéquipier) ; simulé en mode démo. */
+  friendHistory: (playerId: string, days: DayKey[]) => StepHistory;
 };
 
 const mode: Mode = supabase ? 'online' : 'demo';
 
 function initialState(): PersistedState {
   return {
-    profile: { name: 'Moi', avatar: '🏃', dailyGoal: 8000, friendCode: mode === 'demo' ? generateFriendCode() : '' },
+    profile: { name: 'Moi', avatar: '🏃', dailyGoal: 8000, friendCode: mode === 'demo' ? generateCode() : '' },
+    settings: { onboarded: false, reminderHour: 19 },
+    celebratedDay: null,
     friends: mode === 'demo' ? DEMO_FRIENDS : [],
     challenges: [],
     history: {},
-    friendSteps: {},
+    team: null,
+    teamMembers: [],
+    teamBoard: [],
+    playerSteps: {},
     uploaded: {},
     accountId: null,
   };
@@ -143,7 +187,8 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
 
   const getStoredSteps = useCallback((day: DayKey) => stateRef.current.history[day] ?? 0, []);
 
-  const pedometer = usePedometerSync({ enabled: ready, onSteps, getStoredSteps });
+  // Le podomètre (et sa demande d'autorisation) attend la fin de l'accueil.
+  const pedometer = usePedometerSync({ enabled: ready && state.settings.onboarded, onSteps, getStoredSteps });
 
   // --- Synchronisation avec Supabase -----------------------------------------
 
@@ -180,7 +225,10 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
             : { name: p.name, avatar: p.avatar, dailyGoal: p.daily_goal, friendCode: p.friend_code },
           friends: snap.friends,
           challenges: snap.challenges,
-          friendSteps: snap.friendSteps,
+          team: snap.team,
+          teamMembers: snap.teamMembers,
+          teamBoard: snap.teamBoard,
+          playerSteps: snap.playerSteps,
           history,
           uploaded: sameAccount ? { ...s.uploaded, ...snap.mySteps } : snap.mySteps,
         };
@@ -348,14 +396,120 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     }
   }, [userId, refresh]);
 
+  // --- Guerre d'équipes -------------------------------------------------------
+
+  const createTeam = useCallback(
+    async (name: string, emoji: string) => {
+      let team: Team;
+      if (mode === 'demo') {
+        // En démo, les amis simulés rejoignent l'équipe pour animer la guerre.
+        team = { id: 'demo-my-team', name: name.trim(), emoji, code: generateCode() };
+        const joinedOn = weekStart(today);
+        setState((s) => ({
+          ...s,
+          team,
+          teamMembers: [
+            { id: ME_ID, name: s.profile.name, avatar: s.profile.avatar, joinedOn },
+            ...DEMO_FRIENDS.map((f) => ({ ...f, joinedOn })),
+          ],
+        }));
+        return team;
+      }
+      const { db } = requireOnline();
+      team = await api.createTeam(db, name, emoji);
+      await refresh();
+      return team;
+    },
+    [today, requireOnline, refresh],
+  );
+
+  const joinTeam = useCallback(
+    async (code: string) => {
+      if (mode === 'demo') return createTeam(`Équipe ${code.toUpperCase()}`, '⚔️');
+      const { db } = requireOnline();
+      const team = await api.joinTeam(db, code);
+      await refresh();
+      return team;
+    },
+    [createTeam, requireOnline, refresh],
+  );
+
+  const leaveTeam = useCallback(async () => {
+    if (mode === 'online') {
+      const { db } = requireOnline();
+      await api.leaveTeam(db);
+    }
+    setState((s) => ({ ...s, team: null, teamMembers: [] }));
+    if (mode === 'online') await refresh();
+  }, [requireOnline, refresh]);
+
+  const reportTeam = useCallback(
+    async (id: string) => {
+      if (mode === 'demo') return;
+      const { db } = requireOnline();
+      await api.reportTeam(db, id);
+    },
+    [requireOnline],
+  );
+
+  // --- Réglages -----------------------------------------------------------------
+
+  const completeOnboarding = useCallback(() => {
+    setState((s) => ({ ...s, settings: { ...s.settings, onboarded: true } }));
+  }, []);
+
+  const setReminderHour = useCallback((reminderHour: number | null) => {
+    setState((s) => ({ ...s, settings: { ...s.settings, reminderHour } }));
+  }, []);
+
+  const markCelebrated = useCallback(() => {
+    setState((s) => ({ ...s, celebratedDay: toDayKey(new Date()) }));
+  }, []);
+
+  // --- Valeurs dérivées ---------------------------------------------------------
+
   const dayProgress = (now.getHours() * 60 + now.getMinutes()) / (24 * 60);
-  const { friendSteps } = state;
+  const { playerSteps, history, teamMembers, team, teamBoard } = state;
+  const myId = mode === 'online' ? (userId ?? ME_ID) : ME_ID;
 
   const friendHistory = useCallback(
-    (friendId: string, days: DayKey[]) =>
-      mode === 'demo' ? demoHistory(friendId, days, today, dayProgress) : (friendSteps[friendId] ?? {}),
-    [today, dayProgress, friendSteps],
+    (playerId: string, days: DayKey[]) => {
+      if (playerId === myId) return history;
+      return mode === 'demo' ? demoHistory(playerId, days, today, dayProgress) : (playerSteps[playerId] ?? {});
+    },
+    [myId, history, today, dayProgress, playerSteps],
   );
+
+  const streak = useMemo(
+    () => computeStreak(history, state.profile.dailyGoal, today),
+    [history, state.profile.dailyGoal, today],
+  );
+
+  const warDays = useMemo(() => weekDays(today), [today]);
+
+  const teamStandings = useMemo(() => {
+    // Total de mon équipe calculé localement : il inclut mes derniers pas sans attendre le serveur.
+    const myTeamTotal = teamMembers.reduce(
+      (sum, m) => sum + memberContribution(friendHistory(m.id, warDays), warDays, m.joinedOn),
+      0,
+    );
+    const others: TeamStanding[] =
+      mode === 'demo'
+        ? DEMO_RIVALS.map((r) => ({ ...r, steps: demoTeamSteps(r, warDays, today, dayProgress) }))
+        : teamBoard.filter((t) => t.id !== team?.id);
+    if (!team) return others;
+    const server = teamBoard.find((t) => t.id === team.id);
+    return [
+      ...others,
+      {
+        id: team.id,
+        name: team.name,
+        emoji: team.emoji,
+        members: teamMembers.length,
+        steps: Math.max(myTeamTotal, server?.steps ?? 0),
+      },
+    ];
+  }, [teamMembers, friendHistory, warDays, teamBoard, team, today, dayProgress]);
 
   const value = useMemo<AppStore>(
     () => ({
@@ -365,12 +519,23 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       ready,
       today,
       todaySteps: state.history[today] ?? 0,
+      myId,
+      streak,
+      warDays,
+      teamStandings,
       pedometer,
       updateProfile,
       addFriend,
       removeFriend,
       createChallenge,
       deleteChallenge,
+      createTeam,
+      joinTeam,
+      leaveTeam,
+      reportTeam,
+      completeOnboarding,
+      setReminderHour,
+      markCelebrated,
       deleteAccount,
       refresh,
       retry,
@@ -381,12 +546,23 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       sync,
       ready,
       today,
+      myId,
+      streak,
+      warDays,
+      teamStandings,
       pedometer,
       updateProfile,
       addFriend,
       removeFriend,
       createChallenge,
       deleteChallenge,
+      createTeam,
+      joinTeam,
+      leaveTeam,
+      reportTeam,
+      completeOnboarding,
+      setReminderHour,
+      markCelebrated,
       deleteAccount,
       refresh,
       retry,

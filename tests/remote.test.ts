@@ -1,7 +1,14 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { challengeFromRow, friendlyError, groupSteps, pendingUploads } from '../src/lib/remote.ts';
+import {
+  challengeFromRow,
+  friendlyError,
+  groupSteps,
+  pendingUploads,
+  teamMemberFromRow,
+  teamStandingFromRow,
+} from '../src/lib/remote.ts';
 
 const row = {
   id: 'c1',
@@ -52,4 +59,16 @@ test('friendlyError traduit les erreurs SQL connues', () => {
   assert.equal(friendlyError('friend_code_not_found'), 'Aucun joueur ne correspond à ce code.');
   assert.equal(friendlyError('TypeError: Network request failed'), 'Pas de connexion internet.');
   assert.equal(friendlyError(undefined), 'Une erreur est survenue. Réessayez.');
+});
+
+test('équipes : conversion des lignes', () => {
+  assert.deepEqual(teamStandingFromRow({ id: 't', name: 'A', emoji: '🚀', members: 3, steps: '123456' }), {
+    id: 't',
+    name: 'A',
+    emoji: '🚀',
+    members: 3,
+    steps: 123456,
+  });
+  assert.equal(teamMemberFromRow({ id: 'u', name: 'B', avatar: '🏃', team_joined_on: '2026-10-20' }).joinedOn, '2026-10-20');
+  assert.equal(friendlyError('team_full'), 'Cette équipe est complète (30 membres).');
 });

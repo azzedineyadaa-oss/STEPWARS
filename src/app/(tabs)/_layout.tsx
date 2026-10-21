@@ -23,13 +23,15 @@ export default function TabsLayout() {
         headerShadowVisible: false,
         sceneStyle: { backgroundColor: colors.background },
         tabBarStyle: { backgroundColor: colors.surface, borderTopColor: colors.border },
+        tabBarLabelStyle: { fontWeight: '700' },
+        headerTitleStyle: { fontWeight: '800' },
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.textMuted,
       }}
     >
-      <Tabs.Screen name="index" options={{ title: "Aujourd'hui", tabBarIcon: tabIcon('footsteps') }} />
-      <Tabs.Screen name="challenges" options={{ title: 'Défis', tabBarIcon: tabIcon('flash') }} />
-      <Tabs.Screen name="leaderboard" options={{ title: 'Classement', tabBarIcon: tabIcon('trophy') }} />
+      <Tabs.Screen name="index" options={{ title: 'Accueil', headerShown: false, tabBarIcon: tabIcon('footsteps') }} />
+      <Tabs.Screen name="war" options={{ title: 'Guerre', headerShown: false, tabBarIcon: tabIcon('shield') }} />
+      <Tabs.Screen name="challenges" options={{ title: 'Duels', tabBarIcon: tabIcon('flash') }} />
       <Tabs.Screen name="profile" options={{ title: 'Profil', tabBarIcon: tabIcon('person-circle') }} />
     </Tabs>
   );

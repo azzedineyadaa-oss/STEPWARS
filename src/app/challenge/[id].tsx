@@ -27,8 +27,8 @@ export default function ChallengeScreen() {
   const myShare = total === 0 ? 0.5 : result.myTotal / total;
 
   const verdict = {
-    me: 'Vous avez gagné ! 🏆',
-    opponent: `${opponent?.name ?? 'Votre adversaire'} a gagné.`,
+    me: 'Tu as gagné ! 🏆',
+    opponent: `${opponent?.name ?? 'Ton adversaire'} a gagné.`,
     tie: 'Égalité parfaite !',
   };
 

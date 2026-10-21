@@ -11,9 +11,11 @@ L'app utilise [Supabase](https://supabase.com) pour les comptes, les amis, les p
 | Pas | Le téléphone envoie ses totaux journaliers (au plus toutes les 10 s) ; un total ne peut qu'augmenter, et seuls les 8 derniers jours sont acceptés |
 | Défis | Uniquement entre amis, durée de 1, 3 ou 7 jours, visibles et supprimables par les deux joueurs |
 | Confidentialité | Un joueur ne voit que son profil, ses amis, les pas de ses amis et ses propres défis. C'est imposé par la base (Row Level Security), pas seulement par l'app |
+| Guerre d'équipes | Une équipe par joueur (30 membres au plus), rejointe par un code. Chaque semaine (lundi-dimanche), le total d'une équipe additionne les pas de ses membres **depuis leur arrivée** : changer d'équipe en milieu de semaine n'apporte rien. Les coéquipiers voient leurs profils et leurs pas ; le classement global ne montre que le nom, l'emblème, le nombre de membres et le total de chaque équipe |
+| Modération | Un nom d'équipe offensant peut être signalé (appui long dans le classement). Au bout de 3 signalements distincts, l'équipe est masquée du classement des autres. Pour masquer à la main : `update teams set hidden = true where id = '…'` dans l'éditeur SQL |
 | Suppression de compte | Bouton dans l'onglet Profil, qui efface tout (obligatoire pour l'App Store) |
 
-Le schéma complet est dans `supabase/migrations/20261021000000_init.sql`.
+Le schéma est dans `supabase/migrations/` : `20261021000000_init.sql` (profils, amis, pas, duels) puis `20261022000000_teams.sql` (guerre d'équipes).
 
 ## Mise en place
 
@@ -25,7 +27,7 @@ Le schéma complet est dans `supabase/migrations/20261021000000_init.sql`.
 
 ### 2. Créer les tables
 
-**Option simple :** ouvrez **SQL Editor**, puis **New query**, collez le contenu de `supabase/migrations/20261021000000_init.sql` et cliquez sur **Run**.
+**Option simple :** ouvrez **SQL Editor**, puis **New query**. Collez le contenu de `supabase/migrations/20261021000000_init.sql` et cliquez sur **Run**, puis faites de même avec `20261022000000_teams.sql`. L'ordre compte.
 
 **Option CLI :** elle est préférable pour les futures migrations.
 

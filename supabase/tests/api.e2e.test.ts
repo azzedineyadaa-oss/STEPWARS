@@ -43,7 +43,7 @@ test('parcours complet : profil, amis, pas, défi, retrait', async () => {
 
   const bobSnap = await api.fetchSnapshot(bob, BOB, today);
   assert.deepEqual(bobSnap.friends, [{ id: ALICE, name: 'Alice', avatar: '🦊' }]);
-  assert.deepEqual(bobSnap.friendSteps[ALICE], { [today]: 4200, [addDays(today, -1)]: 9100 });
+  assert.deepEqual(bobSnap.playerSteps[ALICE], { [today]: 4200, [addDays(today, -1)]: 9100 });
   assert.deepEqual(bobSnap.mySteps, {});
 
   const challenge = await api.createChallenge(bob, BOB, ALICE, today, 3);
@@ -59,7 +59,7 @@ test('parcours complet : profil, amis, pas, défi, retrait', async () => {
 
   // Un tiers ne voit rien et ne peut pas défier sans être ami.
   const chloeSnap = await api.fetchSnapshot(chloe, CHLOE, today);
-  assert.deepEqual([chloeSnap.friends, chloeSnap.challenges, chloeSnap.friendSteps], [[], [], {}]);
+  assert.deepEqual([chloeSnap.friends, chloeSnap.challenges, chloeSnap.playerSteps], [[], [], {}]);
   await assert.rejects(api.createChallenge(chloe, CHLOE, ALICE, today, 1), api.ApiError);
   await api.deleteChallenge(chloe, challenge.id); // sans effet
   assert.equal((await api.fetchSnapshot(alice, ALICE, today)).challenges.length, 1);
@@ -71,6 +71,38 @@ test('parcours complet : profil, amis, pas, défi, retrait', async () => {
 
   await api.removeFriend(alice, BOB);
   assert.deepEqual((await api.fetchSnapshot(bob, BOB, today)).friends, []);
+});
+
+test('guerre d’équipes : créer, rejoindre, classement, quitter', async () => {
+  const team = await api.createTeam(alice, 'Les Fusées', '🚀');
+  assert.equal(team.name, 'Les Fusées');
+  await assert.rejects(api.createTeam(alice, 'Autre', '🐢'), { message: /déjà partie d’une équipe/ });
+
+  const joined = await api.joinTeam(bob, team.code.toLowerCase());
+  assert.equal(joined.id, team.id);
+  await api.uploadSteps(bob, [{ day: today, steps: 3000 }]);
+
+  const snap = await api.fetchSnapshot(bob, BOB, today);
+  assert.equal(snap.team?.code, team.code);
+  assert.deepEqual(snap.teamMembers.map((m) => m.id).sort(), [ALICE, BOB]);
+  assert.equal(snap.playerSteps[ALICE]?.[today], 4200, 'pas des coéquipiers visibles sans être amis');
+  const mine = snap.teamBoard.find((t) => t.id === team.id);
+  // Alice est arrivée aujourd'hui : ses 9 100 pas d'hier ne comptent pas pour l'équipe.
+  assert.equal(mine?.members, 2);
+  assert.equal(mine?.steps, 4200 + 3000);
+
+  const rival = await api.createTeam(chloe, 'Les Tortues', '🐢');
+  const chloeSnap = await api.fetchSnapshot(chloe, CHLOE, today);
+  assert.deepEqual(chloeSnap.teamBoard.map((t) => t.name).sort(), ['Les Fusées', 'Les Tortues']);
+  assert.deepEqual(chloeSnap.teamMembers.map((m) => m.id), [CHLOE]);
+  assert.equal(chloeSnap.playerSteps[ALICE], undefined, 'pas des autres équipes invisibles');
+  await api.reportTeam(chloe, team.id);
+  await assert.rejects(api.reportTeam(chloe, rival.id), { message: /propre équipe/ });
+
+  await api.leaveTeam(bob);
+  const after = await api.fetchSnapshot(bob, BOB, today);
+  assert.equal(after.team, null);
+  assert.deepEqual(after.teamMembers, []);
 });
 
 test('suppression de compte', async () => {

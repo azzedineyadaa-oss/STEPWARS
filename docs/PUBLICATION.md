@@ -87,6 +87,7 @@ Résultat : un fichier `.ipa` (iOS) et un fichier `.aab` (Android).
 **Rejets fréquents à éviter :**
 - Soumettez un build **connecté à Supabase** (voir `docs/BACKEND.md`) : en mode démo, les amis simulés risquent un refus.
 - Dans les notes de revue, expliquez comment tester sans second téléphone : donnez le code ami d'un compte de test que vous gardez actif.
+- Les noms d'équipe sont du **contenu créé par les joueurs** et visible de tous : Apple exige un moyen de les signaler (règle 1.2). C'est en place (appui long sur une équipe dans le classement) ; indiquez-le dans les notes de revue.
 - La **suppression de compte** exigée par Apple est déjà en place, dans l'onglet Profil, puis « Supprimer mon compte ».
 
 ---

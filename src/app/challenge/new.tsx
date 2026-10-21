@@ -34,7 +34,7 @@ export default function NewChallengeScreen() {
     <ScrollView contentContainerStyle={styles.container}>
       <SectionTitle>Adversaire</SectionTitle>
       {friends.length === 0 ? (
-        <Text style={styles.muted}>Ajoutez d’abord un ami depuis l’onglet Profil.</Text>
+        <Text style={styles.muted}>Ajoute d’abord un ami depuis l’onglet Profil.</Text>
       ) : (
         <View style={styles.wrap}>
           {friends.map((f) => (

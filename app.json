@@ -7,7 +7,7 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
-    "backgroundColor": "#0E0F1A",
+    "backgroundColor": "#0B0C17",
     "ios": {
       "bundleIdentifier": "com.stepwars.app",
       "buildNumber": "1",
@@ -23,7 +23,7 @@
         "android.permission.ACTIVITY_RECOGNITION"
       ],
       "adaptiveIcon": {
-        "backgroundColor": "#0E0F1A",
+        "backgroundColor": "#0B0C17",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
@@ -47,8 +47,14 @@
         "expo-splash-screen",
         {
           "image": "./assets/splash-icon.png",
-          "imageWidth": 200,
-          "backgroundColor": "#0E0F1A"
+          "imageWidth": 160,
+          "backgroundColor": "#0B0C17"
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#FF5A36"
         }
       ]
     ],

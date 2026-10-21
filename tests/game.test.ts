@@ -6,7 +6,7 @@ import {
   buildLeaderboard,
   demoStepsFor,
   evaluateChallenge,
-  generateFriendCode,
+  generateCode,
   lastDays,
   ME_ID,
   recordSteps,
@@ -101,6 +101,6 @@ test('pas de démo déterministes et proportionnels à la journée écoulée', (
 });
 
 test('code ami : 6 caractères sans caractères ambigus', () => {
-  const code = generateFriendCode();
+  const code = generateCode();
   assert.match(code, /^[A-HJ-NP-Z2-9]{6}$/);
 });

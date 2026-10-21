@@ -29,4 +29,6 @@ PSQL=("${RUN[@]}" "$PG_BIN/psql" -h "$WORK" -p "$PORT" -U postgres -d postgres -
 for migration in "$ROOT"/supabase/migrations/*.sql; do
   "${PSQL[@]}" -f "$migration"
 done
-"${PSQL[@]}" -f "$ROOT/supabase/tests/security_test.sql"
+for test_file in "$ROOT"/supabase/tests/*_test.sql; do
+  "${PSQL[@]}" -f "$test_file"
+done

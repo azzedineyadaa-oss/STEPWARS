@@ -107,21 +107,108 @@ export function evaluateChallenge(
 }
 
 /**
- * Classe les joueurs par pas sur la période. Les ex æquo partagent le même rang
- * (classement « 1, 1, 3 »).
+ * Classe par score décroissant, puis par nom. Les ex æquo partagent le même
+ * rang (classement « 1, 1, 3 »).
  */
+export function rankByScore<T extends { name: string; steps: number }>(items: T[]): (T & { rank: number })[] {
+  const sorted = [...items].sort((a, b) => b.steps - a.steps || a.name.localeCompare(b.name));
+  return sorted.map((item) => ({ ...item, rank: sorted.findIndex((q) => q.steps === item.steps) + 1 }));
+}
+
+/** Classe les joueurs par pas sur la période. */
 export function buildLeaderboard(
   players: { id: string; name: string; avatar: string; history: StepHistory }[],
   days: DayKey[],
 ): LeaderboardEntry[] {
-  const sorted = players
-    .map((p) => ({ id: p.id, name: p.name, avatar: p.avatar, steps: sumSteps(p.history, days) }))
-    .sort((a, b) => b.steps - a.steps || a.name.localeCompare(b.name));
+  return rankByScore(
+    players.map((p) => ({ id: p.id, name: p.name, avatar: p.avatar, steps: sumSteps(p.history, days) })),
+  ).map((p) => ({ ...p, isMe: p.id === ME_ID }));
+}
 
-  return sorted.map((p, i) => {
-    const firstWithSameScore = sorted.findIndex((q) => q.steps === p.steps);
-    return { ...p, rank: firstWithSameScore + 1, isMe: p.id === ME_ID };
-  });
+// --- Séries -----------------------------------------------------------------
+
+export type Streak = {
+  /** Jours d'affilée avec l'objectif atteint, en comptant aujourd'hui s'il est atteint. */
+  current: number;
+  best: number;
+  todayDone: boolean;
+};
+
+/**
+ * La série reste vivante tant que la journée n'est pas finie : si l'objectif
+ * n'est pas encore atteint aujourd'hui, on compte la série jusqu'à hier.
+ */
+export function computeStreak(history: StepHistory, goal: number, today: DayKey): Streak {
+  const done = (day: DayKey) => (history[day] ?? 0) >= goal;
+  const todayDone = done(today);
+
+  let current = 0;
+  for (let day = todayDone ? today : addDays(today, -1); done(day); day = addDays(day, -1)) current++;
+
+  let best = current;
+  let run = 0;
+  let previous: DayKey | null = null;
+  for (const day of Object.keys(history).filter(done).sort()) {
+    run = previous !== null && addDays(previous, 1) === day ? run + 1 : 1;
+    best = Math.max(best, run);
+    previous = day;
+  }
+
+  return { current, best, todayDone };
+}
+
+// --- Guerre d'équipes -------------------------------------------------------
+// Une guerre dure une semaine, du lundi au dimanche (jours locaux).
+
+export type Team = { id: string; name: string; emoji: string; code: string };
+
+export type TeamMember = {
+  id: string;
+  name: string;
+  avatar: string;
+  /** Jour d'arrivée dans l'équipe : seuls les pas à partir de ce jour comptent. */
+  joinedOn: DayKey;
+};
+
+export type TeamStanding = { id: string; name: string; emoji: string; members: number; steps: number };
+
+export function weekStart(day: DayKey): DayKey {
+  const weekday = fromDayKey(day).getDay(); // 0 = dimanche
+  return addDays(day, -((weekday + 6) % 7));
+}
+
+export function weekDays(day: DayKey): DayKey[] {
+  const start = weekStart(day);
+  return Array.from({ length: 7 }, (_, i) => addDays(start, i));
+}
+
+/** Temps restant avant la fin de la guerre (lundi suivant à minuit, heure locale). */
+export function warTimeLeft(now: Date): { days: number; hours: number; minutes: number } {
+  const end = fromDayKey(addDays(weekStart(toDayKey(now)), 7));
+  const totalMinutes = Math.max(0, Math.floor((end.getTime() - now.getTime()) / 60_000));
+  return {
+    days: Math.floor(totalMinutes / (24 * 60)),
+    hours: Math.floor((totalMinutes % (24 * 60)) / 60),
+    minutes: totalMinutes % 60,
+  };
+}
+
+/** Pas d'un membre qui comptent pour l'équipe sur la période. */
+export function memberContribution(history: StepHistory, days: DayKey[], joinedOn: DayKey): number {
+  return sumSteps(history, days.filter((day) => day >= joinedOn));
+}
+
+/** Équipe juste devant la mienne et écart à combler (null si je suis premier). */
+export function nextTarget(
+  ranked: (TeamStanding & { rank: number })[],
+  myTeamId: string,
+): { team: TeamStanding & { rank: number }; gap: number } | null {
+  const mine = ranked.find((t) => t.id === myTeamId);
+  if (!mine) return null;
+  const ahead = ranked.filter((t) => t.steps > mine.steps);
+  if (ahead.length === 0) return null;
+  const team = ahead[ahead.length - 1];
+  return { team, gap: team.steps - mine.steps + 1 };
 }
 
 /** Ajoute un relevé de pas pour un jour sans jamais faire baisser le compteur. */
@@ -130,8 +217,8 @@ export function recordSteps(history: StepHistory, day: DayKey, steps: number): S
   return { ...history, [day]: steps };
 }
 
-/** Code ami lisible (6 caractères, sans 0/O/1/I ambigus). */
-export function generateFriendCode(random: () => number = Math.random): string {
+/** Code ami ou d'équipe lisible (6 caractères, sans 0/O/1/I ambigus). */
+export function generateCode(random: () => number = Math.random): string {
   const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   return Array.from({ length: 6 }, () => alphabet[Math.floor(random() * alphabet.length)]).join('');
 }
@@ -173,3 +260,22 @@ export const DEMO_FRIENDS: Friend[] = [
   { id: 'demo-yanis', name: 'Yanis', avatar: '🐺' },
   { id: 'demo-sarah', name: 'Sarah', avatar: '🐯' },
 ];
+
+export const DEMO_TEAM_MEMBERS = 4;
+
+/** Équipes adverses simulées pour la guerre en mode démo. */
+export const DEMO_RIVALS: { id: string; name: string; emoji: string; members: number }[] = [
+  { id: 'demo-team-gazelles', name: 'Les Gazelles', emoji: '🦌', members: 5 },
+  { id: 'demo-team-bitume', name: 'Team Bitume', emoji: '🛹', members: 4 },
+  { id: 'demo-team-dimanche', name: 'Marcheurs du Dimanche', emoji: '🥾', members: 6 },
+  { id: 'demo-team-escargots', name: 'Escargots Turbo', emoji: '🐌', members: 3 },
+];
+
+/** Total simulé d'une équipe adverse sur la période. */
+export function demoTeamSteps(team: { id: string; members: number }, days: DayKey[], today: DayKey, dayProgress: number): number {
+  let total = 0;
+  for (let i = 0; i < team.members; i++) {
+    total += sumSteps(demoHistory(`${team.id}-${i}`, days, today, dayProgress), days);
+  }
+  return total;
+}

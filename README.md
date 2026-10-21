@@ -4,14 +4,17 @@ Application mobile (iOS et Android) de défis de pas entre amis : le téléphone
 
 Construite avec **Expo SDK 58 / React Native**. Un seul code TypeScript pour l'App Store et le Play Store.
 
-## Fonctionnalités (MVP)
+## Fonctionnalités
 
 | Écran | Contenu |
 | --- | --- |
-| **Aujourd'hui** | Pas du jour (podomètre du téléphone), anneau de progression vers l'objectif, historique sur 7 jours |
-| **Défis** | Liste des duels (en cours / terminés), création d'un duel de 1, 3 ou 7 jours, détail jour par jour |
-| **Classement** | Classement entre amis sur aujourd'hui, 7 jours ou 30 jours |
-| **Profil** | Pseudo, avatar, objectif quotidien, code ami, gestion des amis |
+| **Premier lancement** | Présentation, pseudo et avatar, objectif quotidien, activation des rappels |
+| **Accueil** | Pas du jour dans un anneau en dégradé, série 🔥 et record, distance, position de ton équipe dans la guerre, duel en cours, 7 derniers jours. Une célébration (confettis et vibration) quand l'objectif est atteint |
+| **Guerre** | Guerre d'équipes hebdomadaire (lundi-dimanche) : classement de toutes les équipes, compte à rebours, écart à combler pour dépasser l'équipe de devant, contribution de chaque membre, recrutement par code, signalement des noms offensants |
+| **Duels** | Duels de 1, 3 ou 7 jours contre un ami, classement des amis sur 1, 7 ou 30 jours |
+| **Profil** | Pseudo, avatar, objectif, heure du rappel du soir, code ami, amis, suppression du compte |
+
+**Ce qui fait revenir les joueurs** : la série 🔥 qu'on ne veut pas casser, l'équipe qui compte sur toi, le duel en cours, et un rappel chaque soir.
 
 Le serveur est **Supabase** : comptes anonymes, amis par code, pas partagés et défis entre amis. Mise en place dans **[docs/BACKEND.md](docs/BACKEND.md)**.
 
@@ -61,7 +64,8 @@ src/
     challenge/         # création et détail d'un défi
   components/          # composants d'interface
   hooks/usePedometerSync.ts   # lecture du podomètre iOS / Android
-  lib/game.ts          # logique de jeu pure (défis, classement), testée
+  lib/reminders.ts     # rappel quotidien (notification locale)
+  lib/game.ts          # logique de jeu pure (duels, séries, guerre d'équipes), testée
   lib/remote.ts        # conversion des données serveur, testée
   lib/api.ts           # appels Supabase
   state/AppStore.tsx   # état global, cache local et synchronisation
@@ -76,5 +80,7 @@ eas.json               # profils de build et de soumission EAS
 
 1. **Connexion Apple et Google**, pour ne pas perdre son compte en changeant de téléphone.
 2. **Comptage en arrière-plan** : Apple HealthKit (iOS) et Health Connect (Android). Sans eux, Android ne compte les pas que lorsque l'app est ouverte.
-3. **Notifications** : défi reçu, dépassé par un ami, victoire.
-4. **Identité visuelle** : icône, écran de démarrage et captures d'écran définitifs (les fichiers de `assets/` sont ceux du modèle Expo).
+3. **Notifications envoyées par le serveur** : « ton équipe vient de passer 2ᵉ », « Lina t'a défié », résultat de la guerre le lundi matin.
+4. **Historique des guerres** : vainqueurs des semaines passées, trophées d'équipe.
+
+Les icônes de `assets/` sont générées par `scripts/make-icons.mjs`.

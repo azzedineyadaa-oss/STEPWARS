@@ -1,14 +1,29 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-import { addDays, type Challenge, type DayKey, type Friend, type StepHistory } from '@/lib/game';
+import {
+  addDays,
+  weekStart,
+  type Challenge,
+  type DayKey,
+  type Friend,
+  type StepHistory,
+  type Team,
+  type TeamMember,
+  type TeamStanding,
+} from '@/lib/game';
 import {
   challengeFromRow,
   friendFromRow,
   friendlyError,
   groupSteps,
+  teamFromRow,
+  teamMemberFromRow,
+  teamStandingFromRow,
   type ChallengeRow,
   type ProfileRow,
   type StepsRow,
+  type TeamRow,
+  type TeamStandingRow,
 } from '@/lib/remote';
 
 export class ApiError extends Error {}
@@ -31,37 +46,55 @@ export type Snapshot = {
   profile: ProfileRow;
   friends: Friend[];
   challenges: Challenge[];
-  /** Pas des amis, par identifiant. */
-  friendSteps: Record<string, StepHistory>;
+  team: Team | null;
+  teamMembers: TeamMember[];
+  /** Classement des équipes pour la semaine en cours. */
+  teamBoard: TeamStanding[];
+  /** Pas des autres joueurs visibles (amis et coéquipiers), par identifiant. */
+  playerSteps: Record<string, StepHistory>;
   /** Mes pas connus du serveur (pour restaurer l'historique). */
   mySteps: StepHistory;
 };
 
-/** Récupère tout ce que l'app affiche. `today` sert à borner l'historique demandé. */
+const PROFILE_COLUMNS = 'id, name, avatar, daily_goal, friend_code, team_id, team_joined_on';
+
+/** Récupère tout ce que l'app affiche. `today` (jour local) borne l'historique et la semaine de guerre. */
 export async function fetchSnapshot(db: SupabaseClient, myId: string, today: DayKey): Promise<Snapshot> {
-  const [profile, friendRows, challengeRows] = await Promise.all([
-    db.from('profiles').select('id, name, avatar, daily_goal, friend_code').eq('id', myId).single(),
+  const week = weekStart(today);
+  const [profileRow, friendRows, challengeRows, boardRows] = await Promise.all([
+    db.from('profiles').select(PROFILE_COLUMNS).eq('id', myId).single(),
     db.from('friendships').select('friend:profiles!friendships_friend_id_fkey(id, name, avatar)').eq('user_id', myId),
     db.from('challenges').select('id, challenger_id, opponent_id, start_day, days, created_at').order('created_at', { ascending: false }),
-  ]).then(([p, f, c]) => [check(p), check(f), check(c)] as const);
+    db.rpc('team_leaderboard', { from_day: week, to_day: addDays(week, 6) }),
+  ]).then(([p, f, c, b]) => [check(p), check(f), check(c), check(b)] as const);
 
+  const profile = profileRow as ProfileRow;
   const friends = (friendRows as unknown as { friend: ProfileRow | null }[])
     .flatMap((r) => (r.friend ? [friendFromRow(r.friend)] : []))
     .sort((a, b) => a.name.localeCompare(b.name));
   const challenges = (challengeRows as ChallengeRow[]).map((r) => challengeFromRow(r, myId));
+  const teamBoard = (boardRows as TeamStandingRow[]).map(teamStandingFromRow);
+
+  let team: Team | null = null;
+  let teamMembers: TeamMember[] = [];
+  if (profile.team_id) {
+    const [teamRow, memberRows] = await Promise.all([
+      db.from('teams').select('id, name, emoji, code').eq('id', profile.team_id).single(),
+      db.from('profiles').select('id, name, avatar, team_joined_on').eq('team_id', profile.team_id),
+    ]).then(([t, m]) => [check(t), check(m)] as const);
+    team = teamFromRow(teamRow as TeamRow);
+    teamMembers = (memberRows as ProfileRow[]).map(teamMemberFromRow);
+  }
 
   // 30 jours pour le classement, plus loin si un défi a commencé avant.
   const since = challenges.reduce((min, c) => (c.startDay < min ? c.startDay : min), addDays(today, -29));
+  const playerIds = [...new Set([myId, ...friends.map((f) => f.id), ...teamMembers.map((m) => m.id)])];
   const stepRows = check(
-    await db
-      .from('daily_steps')
-      .select('user_id, day, steps')
-      .in('user_id', [myId, ...friends.map((f) => f.id)])
-      .gte('day', since),
+    await db.from('daily_steps').select('user_id, day, steps').in('user_id', playerIds).gte('day', since),
   ) as StepsRow[];
-  const { [myId]: mySteps = {}, ...friendSteps } = groupSteps(stepRows);
+  const { [myId]: mySteps = {}, ...playerSteps } = groupSteps(stepRows);
 
-  return { profile: profile as ProfileRow, friends, challenges, friendSteps, mySteps };
+  return { profile, friends, challenges, team, teamMembers, teamBoard, playerSteps, mySteps };
 }
 
 export async function updateProfile(
@@ -105,6 +138,24 @@ export async function createChallenge(
 
 export async function deleteChallenge(db: SupabaseClient, id: string): Promise<void> {
   check(await db.from('challenges').delete().eq('id', id));
+}
+
+export async function createTeam(db: SupabaseClient, name: string, emoji: string): Promise<Team> {
+  const rows = check(await db.rpc('create_team', { team_name: name, team_emoji: emoji })) as TeamRow[];
+  return teamFromRow(rows[0]);
+}
+
+export async function joinTeam(db: SupabaseClient, code: string): Promise<Team> {
+  const rows = check(await db.rpc('join_team', { team_code: code })) as TeamRow[];
+  return teamFromRow(rows[0]);
+}
+
+export async function leaveTeam(db: SupabaseClient): Promise<void> {
+  check(await db.rpc('leave_team'));
+}
+
+export async function reportTeam(db: SupabaseClient, teamId: string): Promise<void> {
+  check(await db.rpc('report_team', { team: teamId }));
 }
 
 export async function deleteAccount(db: SupabaseClient): Promise<void> {

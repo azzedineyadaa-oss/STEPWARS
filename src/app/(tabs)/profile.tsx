@@ -2,18 +2,21 @@ import { useState } from 'react';
 import { Alert, ScrollView, Share, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { Button, Card, Chip, SectionTitle, StatusBanner } from '@/components/ui';
+import { requestReminderPermission } from '@/lib/reminders';
 import { useAppStore } from '@/state/AppStore';
 import { colors, formatSteps, radius, spacing } from '@/theme';
 
 const GOALS = [5000, 8000, 10000, 15000];
-const AVATARS = ['🏃', '🚶', '🧗', '🚴', '🦸', '🐆'];
+const AVATARS = ['🏃', '🚶', '🧗', '🚴', '🦸', '🐆', '🦊', '🐺'];
+const REMINDER_HOURS = [12, 18, 19, 20, 21];
 
 function errorMessage(e: unknown) {
   return e instanceof Error ? e.message : undefined;
 }
 
 export default function ProfileScreen() {
-  const { mode, profile, updateProfile, friends, addFriend, removeFriend, deleteAccount } = useAppStore();
+  const { mode, profile, updateProfile, friends, addFriend, removeFriend, deleteAccount, settings, setReminderHour } =
+    useAppStore();
   const [friendInput, setFriendInput] = useState('');
   const [busy, setBusy] = useState(false);
   const online = mode === 'online';
@@ -26,7 +29,7 @@ export default function ProfileScreen() {
     try {
       const friend = await addFriend(friendInput);
       setFriendInput('');
-      if (online) Alert.alert('Ami ajouté', `${friend.avatar} ${friend.name} fait maintenant partie de vos amis.`);
+      if (online) Alert.alert('Ami ajouté', `${friend.avatar} ${friend.name} fait maintenant partie de tes amis.`);
     } catch (e) {
       Alert.alert('Ajout impossible', errorMessage(e));
     } finally {
@@ -35,7 +38,7 @@ export default function ProfileScreen() {
   };
 
   const onRemoveFriend = (id: string, name: string) => {
-    Alert.alert('Retirer cet ami ?', `${name} et vos défis contre lui ou elle seront supprimés.`, [
+    Alert.alert('Retirer cet ami ?', `${name} et tes duels contre lui ou elle seront supprimés.`, [
       { text: 'Annuler', style: 'cancel' },
       {
         text: 'Retirer',
@@ -45,6 +48,14 @@ export default function ProfileScreen() {
     ]);
   };
 
+  const onReminder = async (hour: number | null) => {
+    if (hour !== null && !(await requestReminderPermission())) {
+      Alert.alert('Notifications désactivées', 'Autorise les notifications de StepWars dans les réglages du téléphone.');
+      return;
+    }
+    setReminderHour(hour);
+  };
+
   const onShareCode = () =>
     Share.share({
       message: `Défie-moi sur StepWars ! Mon code ami : ${profile.friendCode}`,
@@ -52,8 +63,8 @@ export default function ProfileScreen() {
 
   const onDeleteAccount = () => {
     Alert.alert(
-      'Supprimer votre compte ?',
-      'Votre profil, vos amis, vos défis et vos pas enregistrés sur le serveur seront définitivement effacés.',
+      'Supprimer ton compte ?',
+      'Ton profil, tes amis, tes duels, ton équipe et tes pas enregistrés sur le serveur seront définitivement effacés.',
       [
         { text: 'Annuler', style: 'cancel' },
         {
@@ -61,7 +72,7 @@ export default function ProfileScreen() {
           style: 'destructive',
           onPress: () =>
             deleteAccount()
-              .then(() => Alert.alert('Compte supprimé', 'Toutes vos données ont été effacées.'))
+              .then(() => Alert.alert('Compte supprimé', 'Toutes tes données ont été effacées.'))
               .catch((e) => Alert.alert('Suppression impossible', errorMessage(e))),
         },
       ],
@@ -77,7 +88,7 @@ export default function ProfileScreen() {
         style={styles.input}
         value={profile.name}
         onChangeText={(name) => updateProfile({ name })}
-        placeholder="Votre pseudo"
+        placeholder="Ton pseudo"
         placeholderTextColor={colors.textMuted}
         maxLength={20}
       />
@@ -101,10 +112,18 @@ export default function ProfileScreen() {
         ))}
       </View>
 
+      <SectionTitle>Rappel du soir</SectionTitle>
+      <View style={styles.wrap}>
+        <Chip label="Désactivé" selected={settings.reminderHour === null} onPress={() => onReminder(null)} />
+        {REMINDER_HOURS.map((h) => (
+          <Chip key={h} label={`${h} h`} selected={settings.reminderHour === h} onPress={() => onReminder(h)} />
+        ))}
+      </View>
+
       <SectionTitle>Mon code ami</SectionTitle>
       <Card style={styles.codeCard}>
         <Text style={styles.code}>{profile.friendCode || '······'}</Text>
-        <Text style={styles.muted}>Partagez ce code pour que vos amis vous ajoutent.</Text>
+        <Text style={styles.muted}>Partage ce code pour que tes amis t’ajoutent.</Text>
         {online && profile.friendCode ? <Button title="Partager mon code" variant="secondary" onPress={onShareCode} /> : null}
       </Card>
 
@@ -140,7 +159,7 @@ export default function ProfileScreen() {
         <>
           <SectionTitle>Compte</SectionTitle>
           <Text style={[styles.muted, { textAlign: 'left', marginBottom: spacing.sm }]}>
-            Votre compte est lié à ce téléphone, sans e-mail. Si vous désinstallez l’app, il sera perdu.
+            Ton compte est lié à ce téléphone, sans e-mail. Si tu désinstalles l’app, il sera perdu.
           </Text>
           <Button title="Supprimer mon compte" variant="danger" onPress={onDeleteAccount} />
         </>

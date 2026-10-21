@@ -1,31 +1,7 @@
 -- Scénarios de sécurité et de règles du jeu. Chaque échec stoppe le script.
 \set ON_ERROR_STOP on
 
-create function pg_temp.act_as(who uuid) returns void language plpgsql as $$
-begin
-  perform set_config('request.jwt.claim.sub', coalesce(who::text, ''), false);
-  if who is null then
-    execute 'set role anon';
-  else
-    execute 'set role authenticated';
-  end if;
-end $$;
-
-create function pg_temp.expect_error(sql text, fragment text) returns void language plpgsql as $$
-begin
-  execute sql;
-  raise exception 'ATTENDU une erreur « % » pour : %', fragment, sql;
-exception when others then
-  if sqlerrm not like '%' || fragment || '%' then
-    raise exception 'Mauvaise erreur pour % : % (attendu « % »)', sql, sqlerrm, fragment;
-  end if;
-end $$;
-
-create function pg_temp.check(ok boolean, label text) returns void language plpgsql as $$
-begin
-  if not coalesce(ok, false) then raise exception 'ÉCHEC : %', label; end if;
-  raise notice 'ok - %', label;
-end $$;
+\ir helpers.sql
 
 -- Trois joueurs : Alice, Bob, Chloé.
 insert into auth.users (id) values
