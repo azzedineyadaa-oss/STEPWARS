@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { AppState } from 'react-native';
+import { AppState, Platform } from 'react-native';
 
 import * as api from '@/lib/api';
 import {
@@ -101,6 +101,8 @@ type AppStore = PersistedState & {
   completeOnboarding: () => void;
   setReminderHour: (hour: number | null) => void;
   markCelebrated: () => void;
+  /** Aperçu web en mode démo uniquement (pas de podomètre dans un navigateur). */
+  simulateSteps: ((steps: number) => void) | null;
   /** Supprime le compte et toutes ses données (en ligne uniquement). */
   deleteAccount: () => Promise<void>;
   refresh: () => Promise<void>;
@@ -462,6 +464,12 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     setState((s) => ({ ...s, settings: { ...s.settings, reminderHour } }));
   }, []);
 
+  const simulateSteps = useCallback(
+    (steps: number) => onSteps(toDayKey(new Date()), getStoredSteps(toDayKey(new Date())) + steps),
+    [onSteps, getStoredSteps],
+  );
+  const canSimulate = mode === 'demo' && Platform.OS === 'web';
+
   const markCelebrated = useCallback(() => {
     setState((s) => ({ ...s, celebratedDay: toDayKey(new Date()) }));
   }, []);
@@ -536,6 +544,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       completeOnboarding,
       setReminderHour,
       markCelebrated,
+      simulateSteps: canSimulate ? simulateSteps : null,
       deleteAccount,
       refresh,
       retry,
@@ -563,6 +572,8 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       completeOnboarding,
       setReminderHour,
       markCelebrated,
+      canSimulate,
+      simulateSteps,
       deleteAccount,
       refresh,
       retry,

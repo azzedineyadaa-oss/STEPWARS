@@ -139,7 +139,7 @@ function DuelsCard() {
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
-  const { todaySteps, profile, history, today, pedometer, streak, celebratedDay, markCelebrated, ready } =
+  const { todaySteps, profile, history, today, pedometer, streak, celebratedDay, markCelebrated, ready, simulateSteps } =
     useAppStore();
   const goal = profile.dailyGoal;
   const done = todaySteps >= goal;
@@ -178,11 +178,19 @@ export default function HomeScreen() {
             <Button title="Ouvrir les réglages" variant="secondary" onPress={() => Linking.openSettings()} />
           </Card>
         )}
-        {pedometer === 'unavailable' && (
-          <Card style={styles.alert}>
-            <Text style={styles.alertText}>Aucun podomètre détecté sur cet appareil.</Text>
-          </Card>
-        )}
+        {pedometer === 'unavailable' &&
+          (simulateSteps ? (
+            <Card style={styles.alert}>
+              <Text style={styles.alertText}>
+                Aperçu web : pas de podomètre dans un navigateur. Simule une marche pour tester l’app.
+              </Text>
+              <Button title="👟 Marcher 1 000 pas" variant="secondary" onPress={() => simulateSteps(1000)} />
+            </Card>
+          ) : (
+            <Card style={styles.alert}>
+              <Text style={styles.alertText}>Aucun podomètre détecté sur cet appareil.</Text>
+            </Card>
+          ))}
 
         <View style={styles.ringWrap}>
           <ProgressRing progress={todaySteps / goal} gradient={done ? gradients.victory : gradients.energy}>

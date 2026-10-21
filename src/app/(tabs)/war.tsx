@@ -112,7 +112,7 @@ export default function WarScreen() {
         <View style={styles.heroRow}>
           <Text style={styles.teamEmoji}>{team.emoji}</Text>
           <View style={{ flex: 1 }}>
-            <Text style={styles.teamName} numberOfLines={1}>
+            <Text style={styles.teamName} numberOfLines={2}>
               {team.name}
             </Text>
             <Text style={styles.teamSteps}>{formatSteps(mine?.steps ?? 0)} pas</Text>
@@ -210,7 +210,7 @@ const styles = StyleSheet.create({
   kicker: { color: 'rgba(255,255,255,0.8)', fontSize: 12, fontWeight: '800', letterSpacing: 1 },
   heroRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginTop: spacing.md },
   teamEmoji: { fontSize: 46 },
-  teamName: { color: '#fff', ...font.title },
+  teamName: { color: '#fff', ...font.title, fontSize: 24, lineHeight: 28 },
   teamSteps: { color: '#fff', fontSize: 18, fontWeight: '900', marginTop: 2 },
   teamMeta: { color: 'rgba(255,255,255,0.8)', fontWeight: '700', marginTop: 2 },
   rankBox: { alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.2)', borderRadius: radius.md, paddingVertical: 8, paddingHorizontal: 12 },

@@ -40,3 +40,4 @@ yarn-error.*
 /ios
 /android
 google-play-service-account.json
+dist-preview/
