@@ -25,7 +25,7 @@ Le serveur est **Supabase** : comptes anonymes, amis par code, pas partagés et 
 | Où | Comment | Ce qui marche |
 | --- | --- | --- |
 | **Navigateur** | `npm run preview:web` construit un aperçu autonome dans `dist-preview/`, à héberger n'importe où | Toute l'app en mode démo. Pas de podomètre : un bouton « Marcher 1 000 pas » le remplace. Les confirmations (quitter l'équipe, retirer un ami) et le partage ne fonctionnent pas dans un navigateur |
-| **Téléphone (Expo Go)** | Sur un ordinateur : `npm install` puis `npx expo start --go` (ajouter `--tunnel ngrok` sur Chromebook), et scanner le QR code avec l’app Expo Go | L'app complète avec le vrai podomètre, tant que le téléphone et l'ordinateur sont sur le même réseau Wi-Fi |
+| **Téléphone (Expo Go)** | Sur un ordinateur : `npm install` puis `npx expo start --go` (ajouter `--tunnel` sur Chromebook), et scanner le QR code avec l’app Expo Go | L'app complète avec le vrai podomètre, tant que le téléphone et l'ordinateur sont sur le même réseau Wi-Fi |
 | **Téléphone (installée)** | `npm run build:preview` (compte Expo gratuit) : lien d'installation direct sur Android ; iOS demande un compte Apple Developer | L'app comme elle sera sur les stores |
 
 ## Démarrer
