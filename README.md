@@ -11,6 +11,7 @@ Construite avec **Expo SDK 57 / React Native**. Un seul code TypeScript pour l'A
 | **Premier lancement** | Présentation, pseudo et avatar, objectif quotidien, activation des rappels |
 | **Accueil** | Pas du jour dans un anneau en dégradé, série 🔥 et record, distance, position de ton équipe dans la guerre, duel en cours, 7 derniers jours. Une célébration (confettis et vibration) quand l'objectif est atteint |
 | **Guerre** | Guerre d'équipes hebdomadaire (lundi-dimanche) : classement de toutes les équipes, compte à rebours, écart à combler pour dépasser l'équipe de devant, contribution de chaque membre, recrutement par code, signalement des noms offensants |
+| **Carte** | Conquête de territoire : la ville est découpée en hexagones d'environ 200 m, tes pas conquièrent la zone où tu marches pour ton équipe, et la carte montre la couleur de l'équipe qui tient chaque zone cette semaine. Tes amis peuvent y apparaître s'ils le choisissent (position approximative, mode fantôme par défaut) |
 | **Duels** | Duels de 1, 3 ou 7 jours contre un ami, classement des amis sur 1, 7 ou 30 jours |
 | **Profil** | Pseudo, avatar, objectif, heure du rappel du soir, code ami, amis, suppression du compte |
 
@@ -74,9 +75,12 @@ src/
   hooks/usePedometerSync.ts   # lecture du podomètre iOS / Android
   lib/reminders.ts     # rappel quotidien (notification locale)
   lib/game.ts          # logique de jeu pure (duels, séries, guerre d'équipes), testée
+  lib/hex.ts           # grille d'hexagones de la carte, testée
+  lib/territory.ts     # règles de conquête (pas par zone, anti-triche, propriétaire), testées
   lib/remote.ts        # conversion des données serveur, testée
   lib/api.ts           # appels Supabase
   state/AppStore.tsx   # état global, cache local et synchronisation
+  state/MapStore.tsx   # position, zones parcourues et partage avec les amis
 supabase/migrations/   # schéma de la base et règles de sécurité
 supabase/tests/        # tests du schéma
 tests/                 # tests (node --test)

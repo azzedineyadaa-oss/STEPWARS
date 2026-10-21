@@ -23,6 +23,17 @@ Dans `app.json`, l'identifiant est `com.stepwars.app` (iOS `bundleIdentifier` et
 
 ---
 
+### Carte sur Android : clé Google Maps
+
+Sur iPhone, la carte utilise Apple Plans : rien à faire. Sur Android, les builds EAS ont besoin d'une clé Google Maps, sinon la carte reste grise (Expo Go n'en a pas besoin) :
+
+1. Sur [console.cloud.google.com](https://console.cloud.google.com), créez un projet, activez **Maps SDK for Android**, puis créez une **clé API** limitée à cette API et à votre package Android.
+2. Déclarez-la sur EAS, elle n'est jamais commitée :
+   ```bash
+   npx eas-cli@latest env:create --name GOOGLE_MAPS_ANDROID_KEY --value <votre-clé> --visibility secret --environment production --environment preview --environment development
+   ```
+   `app.config.js` la transmet automatiquement à la configuration Android.
+
 ## 1. Relier le projet à EAS
 
 ```bash
@@ -79,7 +90,7 @@ Résultat : un fichier `.ipa` (iOS) et un fichier `.aab` (Android).
 3. **TestFlight** : le build y apparaît après 10 à 30 minutes de traitement. Ajoutez des testeurs internes (jusqu'à 100) ou externes (jusqu'à 10 000, après une courte revue).
 4. Remplissez la fiche de l'app :
    - description, mots-clés, captures d'écran, URL de support, URL de confidentialité ;
-   - **Confidentialité de l'app** : déclarez « Forme physique » (nombre de pas) et « Identifiants : identifiant utilisateur » (le compte anonyme), **liés à l'utilisateur**, utilisés pour les « fonctionnalités de l'app » et non pour le pistage ;
+   - **Confidentialité de l'app** : déclarez « Forme physique » (nombre de pas), « Localisation approximative » (la zone d'environ 200 m envoyée pour la carte, jamais la position précise) et « Identifiants : identifiant utilisateur » (le compte anonyme), **liés à l'utilisateur**, utilisés pour les « fonctionnalités de l'app » et non pour le pistage ;
    - classification par âge : questionnaire, normalement 4+ ;
    - chiffrement : déjà déclaré dans `app.json` (`ITSAppUsesNonExemptEncryption: false`).
 5. Cliquez sur **Soumettre pour vérification**. La revue prend en général de 24 à 48 h.
@@ -105,7 +116,7 @@ Résultat : un fichier `.ipa` (iOS) et un fichier `.aab` (Android).
      ```
 4. Remplissez **Contenu de l'application** (dans le menu Règles) :
    - politique de confidentialité ;
-   - **Sécurité des données** : « Santé et remise en forme » (nombre de pas) et « Identifiants de l'appareil ou autres » (compte anonyme), collectés, chiffrés en transit, non partagés avec des tiers, et supprimables depuis l'app ;
+   - **Sécurité des données** : « Santé et remise en forme » (nombre de pas), « Position approximative » (carte) et « Identifiants de l'appareil ou autres » (compte anonyme), collectés, chiffrés en transit, non partagés avec des tiers, et supprimables depuis l'app ;
    - **Applications de santé** : déclarez l'app comme application de remise en forme, car elle utilise `ACTIVITY_RECOGNITION` ;
    - classification du contenu, public cible, annonces (aucune).
 5. **Compte personnel créé récemment** : Google exige un **test fermé avec au moins 12 testeurs pendant 14 jours d'affilée** avant de pouvoir publier en production. Prévoyez-le tôt, par exemple avec la famille et les amis, qui sont la cible de l'app de toute façon. Les comptes d'organisation en sont dispensés.

@@ -31,6 +31,7 @@ export default function TabsLayout() {
     >
       <Tabs.Screen name="index" options={{ title: 'Accueil', headerShown: false, tabBarIcon: tabIcon('footsteps') }} />
       <Tabs.Screen name="war" options={{ title: 'Guerre', headerShown: false, tabBarIcon: tabIcon('shield') }} />
+      <Tabs.Screen name="map" options={{ title: 'Carte', headerShown: false, tabBarIcon: tabIcon('map') }} />
       <Tabs.Screen name="challenges" options={{ title: 'Duels', tabBarIcon: tabIcon('flash') }} />
       <Tabs.Screen name="profile" options={{ title: 'Profil', tabBarIcon: tabIcon('person-circle') }} />
     </Tabs>

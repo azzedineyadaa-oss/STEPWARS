@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 
 import { reminderMessage, scheduleDailyReminder } from '@/lib/reminders';
 import { AppStoreProvider, useAppStore } from '@/state/AppStore';
+import { MapStoreProvider } from '@/state/MapStore';
 import { colors } from '@/theme';
 
 SplashScreen.preventAutoHideAsync();
@@ -58,8 +59,10 @@ function RootNavigator() {
 export default function RootLayout() {
   return (
     <AppStoreProvider>
-      <StatusBar style="light" />
-      <RootNavigator />
+      <MapStoreProvider>
+        <StatusBar style="light" />
+        <RootNavigator />
+      </MapStoreProvider>
     </AppStoreProvider>
   );
 }

@@ -40,7 +40,7 @@
       [
         "expo-sensors",
         {
-          "motionPermission": "StepWars utilise le podomètre de votre téléphone pour compter vos pas et les comparer à ceux de vos amis."
+          "motionPermission": "StepWars utilise le podomètre de ton téléphone pour compter tes pas et les comparer à ceux de tes amis."
         }
       ],
       [
@@ -55,6 +55,17 @@
         "expo-notifications",
         {
           "color": "#FF5A36"
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "StepWars utilise ta position quand l'app est ouverte pour attribuer tes pas aux zones de la carte. Seule la zone (environ 200 m) est envoyée, jamais ton adresse.",
+          "locationAlwaysAndWhenInUsePermission": false,
+          "locationAlwaysPermission": false,
+          "motionUsagePermission": false,
+          "isIosBackgroundLocationEnabled": false,
+          "isAndroidBackgroundLocationEnabled": false
         }
       ]
     ],

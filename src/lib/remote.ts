@@ -1,5 +1,6 @@
 // Conversion entre les lignes Supabase et les types de l'app. Pur, testé avec `node --test`.
 import type { Challenge, DayKey, Friend, StepHistory, Team, TeamMember, TeamStanding } from './game.ts';
+import type { FriendOnMap, TerritoryCell } from './territory.ts';
 
 export type ProfileRow = {
   id: string;
@@ -50,6 +51,38 @@ export function teamStandingFromRow(row: TeamStandingRow): TeamStanding {
   return { id: row.id, name: row.name, emoji: row.emoji, members: row.members, steps: Number(row.steps) };
 }
 
+export type TerritoryRow = {
+  cell_q: number;
+  cell_r: number;
+  leader_id: string | null;
+  leader_name: string | null;
+  leader_emoji: string | null;
+  leader_steps: number | string | null;
+  my_team_steps: number | string;
+};
+
+export function territoryCellFromRow(row: TerritoryRow): TerritoryCell {
+  return {
+    key: `${row.cell_q}:${row.cell_r}`,
+    leader: row.leader_id
+      ? { id: row.leader_id, name: row.leader_name ?? '', emoji: row.leader_emoji ?? '', steps: Number(row.leader_steps ?? 0) }
+      : null,
+    myTeamSteps: Number(row.my_team_steps),
+  };
+}
+
+export type FriendOnMapRow = { id: string; name: string; avatar: string; cell_q: number; cell_r: number; updated_at: string };
+
+export function friendOnMapFromRow(row: FriendOnMapRow, now: number): FriendOnMap {
+  return {
+    id: row.id,
+    name: row.name,
+    avatar: row.avatar,
+    cell: { q: row.cell_q, r: row.cell_r },
+    minutesAgo: Math.max(0, Math.round((now - Date.parse(row.updated_at)) / 60_000)),
+  };
+}
+
 /** Regroupe les lignes de pas par joueur. */
 export function groupSteps(rows: StepsRow[]): Record<string, StepHistory> {
   const byUser: Record<string, StepHistory> = {};
@@ -84,6 +117,7 @@ export function friendlyError(message: string | undefined): string {
   if (message.includes('team_full')) return 'Cette équipe est complète (30 membres).';
   if (message.includes('cannot_report_own_team')) return 'Tu ne peux pas signaler ta propre équipe.';
   if (message.includes('teams_name_check')) return 'Le nom d’équipe doit faire entre 2 et 24 caractères.';
+  if (message.includes('area_too_large')) return 'Zoome un peu plus pour voir les territoires.';
   if (message.includes('not_authenticated')) return 'Connexion au serveur perdue. Relancez l’app.';
   if (/network|fetch/i.test(message)) return 'Pas de connexion internet.';
   return 'Une erreur est survenue. Réessayez.';

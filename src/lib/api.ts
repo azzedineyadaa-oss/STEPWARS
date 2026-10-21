@@ -11,6 +11,8 @@ import {
   type TeamMember,
   type TeamStanding,
 } from '@/lib/game';
+import type { Bounds, Cell } from '@/lib/hex';
+import type { CellUpload, FriendOnMap, TerritoryCell } from '@/lib/territory';
 import {
   challengeFromRow,
   friendFromRow,
@@ -19,7 +21,11 @@ import {
   teamFromRow,
   teamMemberFromRow,
   teamStandingFromRow,
+  territoryCellFromRow,
+  friendOnMapFromRow,
   type ChallengeRow,
+  type FriendOnMapRow,
+  type TerritoryRow,
   type ProfileRow,
   type StepsRow,
   type TeamRow,
@@ -156,6 +162,42 @@ export async function leaveTeam(db: SupabaseClient): Promise<void> {
 
 export async function reportTeam(db: SupabaseClient, teamId: string): Promise<void> {
   check(await db.rpc('report_team', { team: teamId }));
+}
+
+// --- Carte ---------------------------------------------------------------------
+
+export async function recordCellSteps(db: SupabaseClient, entries: CellUpload[]): Promise<void> {
+  if (entries.length === 0) return;
+  check(await db.rpc('record_cell_steps', { entries }));
+}
+
+/** Territoire d'une zone de carte entre deux instants (ISO). */
+export async function fetchTerritory(db: SupabaseClient, from: string, to: string, bounds: Bounds): Promise<TerritoryCell[]> {
+  const rows = check(
+    await db.rpc('territory_map', {
+      from_ts: from,
+      to_ts: to,
+      min_q: bounds.minQ,
+      max_q: bounds.maxQ,
+      min_r: bounds.minR,
+      max_r: bounds.maxR,
+    }),
+  ) as TerritoryRow[];
+  return rows.map(territoryCellFromRow);
+}
+
+export async function setLocationSharing(db: SupabaseClient, enabled: boolean): Promise<void> {
+  check(await db.rpc('set_location_sharing', { enabled }));
+}
+
+export async function updateMyLocation(db: SupabaseClient, cell: Cell): Promise<void> {
+  check(await db.rpc('update_my_location', { q: cell.q, r: cell.r }));
+}
+
+export async function fetchFriendsOnMap(db: SupabaseClient): Promise<FriendOnMap[]> {
+  const rows = check(await db.rpc('friends_on_map')) as FriendOnMapRow[];
+  const now = Date.now();
+  return rows.map((r) => friendOnMapFromRow(r, now));
 }
 
 export async function deleteAccount(db: SupabaseClient): Promise<void> {

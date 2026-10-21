@@ -105,6 +105,36 @@ test('guerre d’équipes : créer, rejoindre, classement, quitter', async () =>
   assert.deepEqual(after.teamMembers, []);
 });
 
+test('carte : zones conquises et amis visibles', async () => {
+  // Alice est toujours dans « Les Fusées » (test précédent).
+  const hour = new Date(Math.floor(Date.now() / 3_600_000) * 3_600_000).toISOString();
+  await api.recordCellSteps(alice, [{ q: 3, r: -2, hour, steps: 640 }]);
+  const cells = await api.fetchTerritory(alice, new Date(Date.now() - 86_400_000).toISOString(), new Date(Date.now() + 3_600_000).toISOString(), {
+    minQ: 0,
+    maxQ: 10,
+    minR: -5,
+    maxR: 5,
+  });
+  assert.deepEqual(cells, [{ key: '3:-2', leader: null, myTeamSteps: 640 }], 'pas récents : visibles pour son équipe seulement');
+  await assert.rejects(
+    api.fetchTerritory(alice, hour, hour, { minQ: 0, maxQ: 500, minR: 0, maxR: 1 }),
+    { message: /Zoome/ },
+  );
+
+  const aliceCode = (await api.fetchSnapshot(alice, ALICE, today)).profile.friend_code;
+  await api.addFriend(bob, aliceCode);
+  await api.updateMyLocation(alice, { q: 3, r: -2 });
+  assert.deepEqual(await api.fetchFriendsOnMap(bob), [], 'mode fantôme par défaut');
+  await api.setLocationSharing(alice, true);
+  await api.updateMyLocation(alice, { q: 3, r: -2 });
+  const seen = await api.fetchFriendsOnMap(bob);
+  assert.equal(seen.length, 1);
+  assert.deepEqual({ id: seen[0].id, cell: seen[0].cell }, { id: ALICE, cell: { q: 3, r: -2 } });
+  assert.ok(seen[0].minutesAgo <= 1);
+  await api.setLocationSharing(alice, false);
+  assert.deepEqual(await api.fetchFriendsOnMap(bob), []);
+});
+
 test('suppression de compte', async () => {
   // signOut local échoue sans session : on appelle la RPC directement comme le fait deleteAccount.
   const { error } = await chloe.rpc('delete_account');
