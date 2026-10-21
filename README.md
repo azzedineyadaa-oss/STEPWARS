@@ -13,7 +13,9 @@ Construite avec **Expo SDK 58 / React Native**. Un seul code TypeScript pour l'A
 | **Classement** | Classement entre amis sur aujourd'hui, 7 jours ou 30 jours |
 | **Profil** | Pseudo, avatar, objectif quotidien, code ami, gestion des amis |
 
-> **Mode démo :** vos pas sont réels, mais il n'y a pas encore de serveur. Les amis et leurs pas sont simulés localement (valeurs déterministes). Le branchement d'un backend est la prochaine étape, voir [Feuille de route](#feuille-de-route).
+Le serveur est **Supabase** : comptes anonymes, amis par code, pas partagés et défis entre amis. Mise en place dans **[docs/BACKEND.md](docs/BACKEND.md)**.
+
+> **Mode démo :** tant que le fichier `.env.local` ne contient pas les clés Supabase, l'app fonctionne sans serveur. Vos pas sont réels, mais les amis et leurs pas sont simulés localement.
 
 ## Démarrer
 
@@ -23,6 +25,9 @@ Prérequis : Node.js 22.18 ou plus récent, et un téléphone (le podomètre ne 
 npm install
 npm start          # serveur de développement
 npm test           # tests de la logique de jeu
+npm run test:db    # tests du schéma et des règles de sécurité (Postgres local)
+npm run test:api   # test de bout en bout des appels serveur
+npm run lint       # ESLint
 npm run typecheck  # vérification TypeScript
 ```
 
@@ -57,7 +62,11 @@ src/
   components/          # composants d'interface
   hooks/usePedometerSync.ts   # lecture du podomètre iOS / Android
   lib/game.ts          # logique de jeu pure (défis, classement), testée
-  state/AppStore.tsx   # état global et sauvegarde locale (AsyncStorage)
+  lib/remote.ts        # conversion des données serveur, testée
+  lib/api.ts           # appels Supabase
+  state/AppStore.tsx   # état global, cache local et synchronisation
+supabase/migrations/   # schéma de la base et règles de sécurité
+supabase/tests/        # tests du schéma
 tests/                 # tests (node --test)
 app.json               # configuration de l'app (identifiants, permissions, icônes)
 eas.json               # profils de build et de soumission EAS
@@ -65,7 +74,7 @@ eas.json               # profils de build et de soumission EAS
 
 ## Feuille de route
 
-1. **Backend et vrais amis** (Supabase ou Firebase) : comptes, ajout d'amis par code, synchronisation des pas, défis partagés.
+1. **Connexion Apple et Google**, pour ne pas perdre son compte en changeant de téléphone.
 2. **Comptage en arrière-plan** : Apple HealthKit (iOS) et Health Connect (Android). Sans eux, Android ne compte les pas que lorsque l'app est ouverte.
 3. **Notifications** : défi reçu, dépassé par un ami, victoire.
 4. **Identité visuelle** : icône, écran de démarrage et captures d'écran définitifs (les fichiers de `assets/` sont ceux du modèle Expo).

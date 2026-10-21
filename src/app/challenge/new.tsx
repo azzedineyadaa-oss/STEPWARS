@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Button, Chip, SectionTitle } from '@/components/ui';
 import { useAppStore } from '@/state/AppStore';
@@ -16,18 +16,25 @@ export default function NewChallengeScreen() {
   const { friends, createChallenge } = useAppStore();
   const [opponentId, setOpponentId] = useState<string | null>(friends[0]?.id ?? null);
   const [days, setDays] = useState(1);
+  const [busy, setBusy] = useState(false);
 
-  const onCreate = () => {
+  const onCreate = async () => {
     if (!opponentId) return;
-    const challenge = createChallenge(opponentId, days);
-    router.replace({ pathname: '/challenge/[id]', params: { id: challenge.id } });
+    setBusy(true);
+    try {
+      const challenge = await createChallenge(opponentId, days);
+      router.replace({ pathname: '/challenge/[id]', params: { id: challenge.id } });
+    } catch (e) {
+      Alert.alert('Défi non créé', e instanceof Error ? e.message : undefined);
+      setBusy(false);
+    }
   };
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <SectionTitle>Adversaire</SectionTitle>
       {friends.length === 0 ? (
-        <Text style={styles.muted}>Ajoutez d'abord un ami depuis l'onglet Profil.</Text>
+        <Text style={styles.muted}>Ajoutez d’abord un ami depuis l’onglet Profil.</Text>
       ) : (
         <View style={styles.wrap}>
           {friends.map((f) => (
@@ -49,10 +56,10 @@ export default function NewChallengeScreen() {
       </View>
 
       <Text style={[styles.muted, { marginVertical: spacing.lg }]}>
-        Le défi commence aujourd'hui. Celui ou celle qui fait le plus de pas sur la période gagne.
+        Le défi commence aujourd’hui. Celui ou celle qui fait le plus de pas sur la période gagne.
       </Text>
 
-      <Button title="Lancer le défi" onPress={onCreate} disabled={!opponentId} />
+      <Button title={busy ? 'Envoi…' : 'Lancer le défi'} onPress={onCreate} disabled={!opponentId || busy} />
     </ScrollView>
   );
 }

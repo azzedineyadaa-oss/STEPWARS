@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 
+import { useAppStore } from '@/state/AppStore';
 import { colors, radius, spacing } from '@/theme';
 
 export function Card({ children, style }: { children: ReactNode; style?: StyleProp<ViewStyle> }) {
@@ -51,13 +52,22 @@ export function Chip({ label, selected, onPress }: { label: string; selected: bo
   );
 }
 
-export function DemoBanner() {
+/** Bandeau d'état : mode démo, connexion en cours ou erreur réseau. Rien quand tout va bien. */
+export function StatusBanner() {
+  const { mode, sync, retry } = useAppStore();
+  let text: string | null = null;
+  if (mode === 'demo') {
+    text = 'Mode démo : vos pas sont réels, ceux de vos amis sont simulés (serveur non configuré).';
+  } else if (sync.status === 'connecting') {
+    text = 'Connexion au serveur…';
+  } else if (sync.status === 'error') {
+    text = `${sync.message} Touchez pour réessayer.`;
+  }
+  if (!text) return null;
   return (
-    <View style={styles.banner}>
-      <Text style={styles.bannerText}>
-        Mode démo : vos pas sont réels, ceux de vos amis sont simulés en attendant la connexion au serveur.
-      </Text>
-    </View>
+    <Pressable style={styles.banner} onPress={retry} disabled={sync.status !== 'error'}>
+      <Text style={styles.bannerText}>{text}</Text>
+    </Pressable>
   );
 }
 

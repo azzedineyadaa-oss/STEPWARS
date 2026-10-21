@@ -1,7 +1,7 @@
 import { Link, router } from 'expo-router';
 import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { Button, Card, DemoBanner } from '@/components/ui';
+import { Button, Card, StatusBanner } from '@/components/ui';
 import { challengeDays, evaluateChallenge, type Challenge } from '@/lib/game';
 import { useAppStore } from '@/state/AppStore';
 import { colors, formatSteps, spacing } from '@/theme';
@@ -48,12 +48,12 @@ export default function ChallengesScreen() {
       keyExtractor={(c) => c.id}
       ListHeaderComponent={
         <View style={{ gap: spacing.md, marginBottom: spacing.md }}>
-          <DemoBanner />
+          <StatusBanner />
           <Button title="⚡ Lancer un défi" onPress={() => router.push('/challenge/new')} />
         </View>
       }
       ListEmptyComponent={
-        <Text style={styles.empty}>Aucun défi pour l'instant. Défiez un ami pour commencer !</Text>
+        <Text style={styles.empty}>Aucun défi pour l’instant. Défiez un ami pour commencer !</Text>
       }
       ItemSeparatorComponent={() => <View style={{ height: spacing.sm }} />}
       renderItem={({ item }) => <ChallengeRow challenge={item} />}

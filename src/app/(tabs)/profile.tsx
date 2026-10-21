@@ -1,32 +1,77 @@
 import { useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, ScrollView, Share, StyleSheet, Text, TextInput, View } from 'react-native';
 
-import { Button, Card, Chip, SectionTitle } from '@/components/ui';
+import { Button, Card, Chip, SectionTitle, StatusBanner } from '@/components/ui';
 import { useAppStore } from '@/state/AppStore';
 import { colors, formatSteps, radius, spacing } from '@/theme';
 
 const GOALS = [5000, 8000, 10000, 15000];
 const AVATARS = ['🏃', '🚶', '🧗', '🚴', '🦸', '🐆'];
 
-export default function ProfileScreen() {
-  const { profile, updateProfile, friends, addFriend, removeFriend } = useAppStore();
-  const [friendName, setFriendName] = useState('');
+function errorMessage(e: unknown) {
+  return e instanceof Error ? e.message : undefined;
+}
 
-  const onAddFriend = () => {
-    if (!friendName.trim()) return;
-    addFriend(friendName);
-    setFriendName('');
+export default function ProfileScreen() {
+  const { mode, profile, updateProfile, friends, addFriend, removeFriend, deleteAccount } = useAppStore();
+  const [friendInput, setFriendInput] = useState('');
+  const [busy, setBusy] = useState(false);
+  const online = mode === 'online';
+
+  const canAdd = online ? friendInput.trim().length === 6 : friendInput.trim().length > 0;
+
+  const onAddFriend = async () => {
+    if (!canAdd || busy) return;
+    setBusy(true);
+    try {
+      const friend = await addFriend(friendInput);
+      setFriendInput('');
+      if (online) Alert.alert('Ami ajouté', `${friend.avatar} ${friend.name} fait maintenant partie de vos amis.`);
+    } catch (e) {
+      Alert.alert('Ajout impossible', errorMessage(e));
+    } finally {
+      setBusy(false);
+    }
   };
 
   const onRemoveFriend = (id: string, name: string) => {
     Alert.alert('Retirer cet ami ?', `${name} et vos défis contre lui ou elle seront supprimés.`, [
       { text: 'Annuler', style: 'cancel' },
-      { text: 'Retirer', style: 'destructive', onPress: () => removeFriend(id) },
+      {
+        text: 'Retirer',
+        style: 'destructive',
+        onPress: () => removeFriend(id).catch((e) => Alert.alert('Retrait impossible', errorMessage(e))),
+      },
     ]);
+  };
+
+  const onShareCode = () =>
+    Share.share({
+      message: `Défie-moi sur StepWars ! Mon code ami : ${profile.friendCode}`,
+    });
+
+  const onDeleteAccount = () => {
+    Alert.alert(
+      'Supprimer votre compte ?',
+      'Votre profil, vos amis, vos défis et vos pas enregistrés sur le serveur seront définitivement effacés.',
+      [
+        { text: 'Annuler', style: 'cancel' },
+        {
+          text: 'Supprimer',
+          style: 'destructive',
+          onPress: () =>
+            deleteAccount()
+              .then(() => Alert.alert('Compte supprimé', 'Toutes vos données ont été effacées.'))
+              .catch((e) => Alert.alert('Suppression impossible', errorMessage(e))),
+        },
+      ],
+    );
   };
 
   return (
     <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+      <StatusBanner />
+
       <SectionTitle>Pseudo</SectionTitle>
       <TextInput
         style={styles.input}
@@ -58,8 +103,9 @@ export default function ProfileScreen() {
 
       <SectionTitle>Mon code ami</SectionTitle>
       <Card style={styles.codeCard}>
-        <Text style={styles.code}>{profile.friendCode}</Text>
+        <Text style={styles.code}>{profile.friendCode || '······'}</Text>
         <Text style={styles.muted}>Partagez ce code pour que vos amis vous ajoutent.</Text>
+        {online && profile.friendCode ? <Button title="Partager mon code" variant="secondary" onPress={onShareCode} /> : null}
       </Card>
 
       <SectionTitle>Amis ({friends.length})</SectionTitle>
@@ -77,16 +123,28 @@ export default function ProfileScreen() {
 
       <View style={styles.addRow}>
         <TextInput
-          style={[styles.input, { flex: 1 }]}
-          value={friendName}
-          onChangeText={setFriendName}
-          placeholder="Nom de l'ami (démo)"
+          style={[styles.input, { flex: 1 }, online && styles.codeInput]}
+          value={friendInput}
+          onChangeText={(text) => setFriendInput(online ? text.toUpperCase() : text)}
+          placeholder={online ? 'Code ami (6 caractères)' : "Nom de l'ami (démo)"}
           placeholderTextColor={colors.textMuted}
           onSubmitEditing={onAddFriend}
-          maxLength={20}
+          autoCapitalize={online ? 'characters' : 'words'}
+          autoCorrect={false}
+          maxLength={online ? 6 : 20}
         />
-        <Button title="Ajouter" onPress={onAddFriend} disabled={!friendName.trim()} />
+        <Button title={busy ? '…' : 'Ajouter'} onPress={onAddFriend} disabled={!canAdd || busy} />
       </View>
+
+      {online && (
+        <>
+          <SectionTitle>Compte</SectionTitle>
+          <Text style={[styles.muted, { textAlign: 'left', marginBottom: spacing.sm }]}>
+            Votre compte est lié à ce téléphone, sans e-mail. Si vous désinstallez l’app, il sera perdu.
+          </Text>
+          <Button title="Supprimer mon compte" variant="danger" onPress={onDeleteAccount} />
+        </>
+      )}
     </ScrollView>
   );
 }
@@ -103,8 +161,9 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     fontSize: 16,
   },
+  codeInput: { letterSpacing: 3, fontWeight: '700' },
   wrap: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  codeCard: { alignItems: 'center', gap: spacing.xs },
+  codeCard: { alignItems: 'center', gap: spacing.sm },
   code: { color: colors.primary, fontSize: 32, fontWeight: '800', letterSpacing: 6 },
   muted: { color: colors.textMuted, textAlign: 'center' },
   friendRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },

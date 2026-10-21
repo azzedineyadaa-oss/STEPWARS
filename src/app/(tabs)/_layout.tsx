@@ -9,9 +9,9 @@ type IconName = ComponentProps<typeof Ionicons>['name'];
 
 function tabIcon(name: IconName) {
   // Les couleurs d'onglet définies plus bas sont toutes des chaînes.
-  return ({ color, size }: { color: ColorValue; size: number }) => (
-    <Ionicons name={name} color={color as string} size={size} />
-  );
+  return function TabBarIcon({ color, size }: { color: ColorValue; size: number }) {
+    return <Ionicons name={name} color={color as string} size={size} />;
+  };
 }
 
 export default function TabsLayout() {

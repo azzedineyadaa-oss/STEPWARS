@@ -44,4 +44,7 @@ Docs: https://docs.expo.dev/eas/index.md
 
 - Game logic lives in `src/lib/game.ts` and has no imports, so it runs under `node --test`. Keep it free of React Native imports and run `npm test` after changing it.
 - `docs.expo.dev` and the Expo API may be unreachable in sandboxed environments; `npx expo install` then fails. Take SDK-compatible versions from `node_modules/expo/bundledNativeModules.json` and install them with npm.
+- `src/lib/remote.ts` follows the same rule (type-only imports of `./game.ts`).
+- The backend is Supabase (`docs/BACKEND.md`). Any schema change goes in a new file under `supabase/migrations/` and must keep `npm run test:db` and `npm run test:api` (end-to-end test of `src/lib/api.ts` through PostgREST) passing; add scenarios to `supabase/tests/security_test.sql` for new rules.
+- Without `EXPO_PUBLIC_SUPABASE_URL`/`EXPO_PUBLIC_SUPABASE_KEY` the app runs in demo mode; keep both modes working.
 - Store publishing steps are in `docs/PUBLICATION.md`.

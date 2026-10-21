@@ -79,14 +79,15 @@ Résultat : un fichier `.ipa` (iOS) et un fichier `.aab` (Android).
 3. **TestFlight** : le build y apparaît après 10 à 30 minutes de traitement. Ajoutez des testeurs internes (jusqu'à 100) ou externes (jusqu'à 10 000, après une courte revue).
 4. Remplissez la fiche de l'app :
    - description, mots-clés, captures d'écran, URL de support, URL de confidentialité ;
-   - **Confidentialité de l'app** : déclarez « Forme physique » pour les données de pas. Elles servent au fonctionnement de l'app et ne sont pas liées à l'identité tant qu'il n'y a pas de comptes ;
+   - **Confidentialité de l'app** : déclarez « Forme physique » (nombre de pas) et « Identifiants : identifiant utilisateur » (le compte anonyme), **liés à l'utilisateur**, utilisés pour les « fonctionnalités de l'app » et non pour le pistage ;
    - classification par âge : questionnaire, normalement 4+ ;
    - chiffrement : déjà déclaré dans `app.json` (`ITSAppUsesNonExemptEncryption: false`).
 5. Cliquez sur **Soumettre pour vérification**. La revue prend en général de 24 à 48 h.
 
 **Rejets fréquents à éviter :**
-- Contenu de démo présenté comme réel : expliquez dans les notes de revue que les amis sont simulés dans cette version, ou attendez d'avoir le backend.
-- Dès qu'il y aura des comptes utilisateur, Apple exige une option de **suppression de compte** dans l'app.
+- Soumettez un build **connecté à Supabase** (voir `docs/BACKEND.md`) : en mode démo, les amis simulés risquent un refus.
+- Dans les notes de revue, expliquez comment tester sans second téléphone : donnez le code ami d'un compte de test que vous gardez actif.
+- La **suppression de compte** exigée par Apple est déjà en place, dans l'onglet Profil, puis « Supprimer mon compte ».
 
 ---
 
@@ -103,7 +104,7 @@ Résultat : un fichier `.ipa` (iOS) et un fichier `.aab` (Android).
      ```
 4. Remplissez **Contenu de l'application** (dans le menu Règles) :
    - politique de confidentialité ;
-   - **Sécurité des données** : « Santé et remise en forme » pour le nombre de pas ;
+   - **Sécurité des données** : « Santé et remise en forme » (nombre de pas) et « Identifiants de l'appareil ou autres » (compte anonyme), collectés, chiffrés en transit, non partagés avec des tiers, et supprimables depuis l'app ;
    - **Applications de santé** : déclarez l'app comme application de remise en forme, car elle utilise `ACTIVITY_RECOGNITION` ;
    - classification du contenu, public cible, annonces (aucune).
 5. **Compte personnel créé récemment** : Google exige un **test fermé avec au moins 12 testeurs pendant 14 jours d'affilée** avant de pouvoir publier en production. Prévoyez-le tôt, par exemple avec la famille et les amis, qui sont la cible de l'app de toute façon. Les comptes d'organisation en sont dispensés.
@@ -122,7 +123,8 @@ Résultat : un fichier `.ipa` (iOS) et un fichier `.aab` (Android).
 
 - [ ] Identifiant `com.stepwars.app` remplacé par le vôtre dans `app.json`
 - [ ] Icône, écran de démarrage et icône adaptative Android définitifs dans `assets/`
-- [ ] Politique de confidentialité en ligne (pas collectés, stockage local, pas de revente)
+- [ ] Serveur Supabase configuré et variables EAS déclarées (`docs/BACKEND.md`)
+- [ ] Politique de confidentialité en ligne (pas collectés, hébergés chez Supabase, visibles par les seuls amis, pas de revente, suppression depuis l'app)
 - [ ] Captures d'écran prises sur de vrais téléphones
 - [ ] Test sur au moins un iPhone et un téléphone Android
 - [ ] (Android, compte personnel) test fermé de 12 testeurs pendant 14 jours terminé

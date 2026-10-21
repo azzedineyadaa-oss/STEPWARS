@@ -19,7 +19,7 @@ export default function TodayScreen() {
       {pedometer === 'denied' && (
         <Card style={styles.alert}>
           <Text style={styles.alertText}>
-            StepWars a besoin de l'accès à l'activité physique pour compter vos pas.
+            StepWars a besoin de l’accès à l’activité physique pour compter vos pas.
           </Text>
           <Button title="Ouvrir les réglages" variant="secondary" onPress={() => Linking.openSettings()} />
         </Card>

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { Card, Chip, DemoBanner } from '@/components/ui';
+import { Card, Chip, StatusBanner } from '@/components/ui';
 import { ME_ID, buildLeaderboard, lastDays } from '@/lib/game';
 import { useAppStore } from '@/state/AppStore';
 import { colors, formatSteps, spacing } from '@/theme';
@@ -29,7 +29,7 @@ export default function LeaderboardScreen() {
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <DemoBanner />
+      <StatusBanner />
       <View style={styles.periods}>
         {PERIODS.map((p) => (
           <Chip key={p.days} label={p.label} selected={periodDays === p.days} onPress={() => setPeriodDays(p.days)} />

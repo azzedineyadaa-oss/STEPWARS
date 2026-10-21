@@ -1,7 +1,7 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { Button, Card, DemoBanner, SectionTitle } from '@/components/ui';
+import { Button, Card, StatusBanner, SectionTitle } from '@/components/ui';
 import { challengeDays, evaluateChallenge, fromDayKey } from '@/lib/game';
 import { useAppStore } from '@/state/AppStore';
 import { colors, formatSteps, radius, spacing } from '@/theme';
@@ -14,7 +14,7 @@ export default function ChallengeScreen() {
   if (!challenge) {
     return (
       <View style={styles.container}>
-        <Text style={styles.muted}>Ce défi n'existe plus.</Text>
+        <Text style={styles.muted}>Ce défi n’existe plus.</Text>
       </View>
     );
   }
@@ -38,16 +38,20 @@ export default function ChallengeScreen() {
       {
         text: 'Supprimer',
         style: 'destructive',
-        onPress: () => {
-          deleteChallenge(challenge.id);
-          router.back();
+        onPress: async () => {
+          try {
+            await deleteChallenge(challenge.id);
+            router.back();
+          } catch (e) {
+            Alert.alert('Suppression impossible', e instanceof Error ? e.message : undefined);
+          }
         },
       },
     ]);
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <DemoBanner />
+      <StatusBanner />
       <Card style={{ gap: spacing.md }}>
         <View style={styles.versus}>
           <View style={styles.player}>
