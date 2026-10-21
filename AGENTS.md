@@ -48,4 +48,5 @@ Docs: https://docs.expo.dev/eas/index.md
 - The backend is Supabase (`docs/BACKEND.md`). Any schema change goes in a new file under `supabase/migrations/` and must keep `npm run test:db` and `npm run test:api` (end-to-end test of `src/lib/api.ts` through PostgREST) passing; add scenarios to `supabase/tests/*_test.sql` (shared helpers in `helpers.sql`) for new rules.
 - Without `EXPO_PUBLIC_SUPABASE_URL`/`EXPO_PUBLIC_SUPABASE_KEY` the app runs in demo mode; keep both modes working.
 - The app talks to the player with « tu » (the team is « vous »). Keep new copy consistent.
+- The project stays on the SDK that Expo Go on the App Store supports (SDK 57 as of October 2026), so the owner can test on an iPhone. Upgrade only once Expo Go supports the new SDK.
 - Store publishing steps are in `docs/PUBLICATION.md`.
