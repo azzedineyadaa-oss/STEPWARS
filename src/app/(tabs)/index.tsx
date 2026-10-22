@@ -4,7 +4,7 @@ import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-na
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Celebration } from '@/components/Celebration';
-import { ProgressRing } from '@/components/ProgressRing';
+import { Ascent } from '@/components/Ascent';
 import { Avatar, Button, Card, SectionTitle, Stat, StatusBanner, TeamBadge, type IconName } from '@/components/ui';
 import {
   addDays,
@@ -274,36 +274,64 @@ function DuelCard() {
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
-  const { todaySteps, profile, history, today, pedometer, streak, celebratedDay, markCelebrated, ready, simulateSteps, team } =
-    useAppStore();
+  const {
+    todaySteps,
+    profile,
+    history,
+    today,
+    pedometer,
+    streak,
+    celebratedDay,
+    markCelebrated,
+    ready,
+    simulateSteps,
+    team,
+    friends,
+    friendHistory,
+  } = useAppStore();
   const goal = profile.dailyGoal;
   const done = todaySteps >= goal;
   const freshBadges = newBadges(history, goal, streak.best, computeStreak(history, goal, addDays(today, -1)).best, today);
   const week = lastDays(today, 7);
   const weekMax = Math.max(goal, ...week.map((d) => history[d] ?? 0));
   const now = new Date();
+  // Mes amis sur le sentier, à leur progression du jour.
+  const walkers = friends.map((f) => ({
+    id: f.id,
+    name: f.name,
+    progress: (friendHistory(f.id, [today])[today] ?? 0) / goal,
+  }));
 
   return (
     <>
-      <ScrollView
-        style={{ backgroundColor: colors.background }}
-        contentContainerStyle={[styles.container, { paddingTop: insets.top + spacing.md }]}
-      >
-        <View style={styles.header}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.label}>
-              {now.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
-            </Text>
-            <Text style={styles.hello} numberOfLines={1}>
-              {greeting(now.getHours())}, {profile.name}
+      <ScrollView style={{ backgroundColor: colors.background }} contentContainerStyle={{ paddingBottom: spacing.xl }}>
+        <Ascent progress={todaySteps / goal} friends={walkers}>
+          <View style={[styles.hero, { paddingTop: insets.top + spacing.sm }]}>
+            <View style={styles.header}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.skyLabel}>
+                  {now.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
+                </Text>
+                <Text style={styles.hello} numberOfLines={1}>
+                  {greeting(now.getHours())}, {profile.name}
+                </Text>
+              </View>
+              <View style={styles.streak}>
+                <Ionicons name="flame" size={16} color={streak.current > 0 ? colors.primary : colors.textFaint} />
+                <Text style={[styles.streakText, streak.current === 0 && { color: colors.textMuted }]}>{streak.current}</Text>
+              </View>
+            </View>
+            <Text style={[styles.skyLabel, { marginTop: spacing.md }]}>L’ascension du jour</Text>
+            <Text style={styles.steps}>{formatSteps(todaySteps)}</Text>
+            <Text style={styles.goal}>
+              {done
+                ? `Sommet atteint · objectif ${formatSteps(goal)}`
+                : `sur ${formatSteps(goal)} · sommet dans ${formatSteps(goal - todaySteps)} pas`}
             </Text>
           </View>
-          <View style={styles.streak}>
-            <Ionicons name="flame" size={16} color={streak.current > 0 ? colors.primary : colors.textFaint} />
-            <Text style={[styles.streakText, streak.current === 0 && { color: colors.textMuted }]}>{streak.current}</Text>
-          </View>
-        </View>
+        </Ascent>
 
+        <View style={styles.container}>
         <StatusBanner />
 
         {pedometer === 'denied' && (
@@ -326,12 +354,7 @@ export default function HomeScreen() {
 
         <RecapCard />
 
-        <View style={styles.ringWrap}>
-          <ProgressRing progress={todaySteps / goal} color={done ? colors.success : colors.primary}>
-            <Text style={styles.label}>Aujourd’hui</Text>
-            <Text style={styles.steps}>{formatSteps(todaySteps)}</Text>
-            <Text style={styles.goal}>/ {formatSteps(goal)} pas</Text>
-          </ProgressRing>
+        <View style={styles.messageWrap}>
           <Text style={styles.message}>{message(todaySteps, goal)}</Text>
           {done && (
             <Pressable style={styles.shareLink} onPress={() => router.push('/share')}>
@@ -419,6 +442,7 @@ export default function HomeScreen() {
             })}
           </View>
         </Card>
+        </View>
       </ScrollView>
 
       <Celebration
@@ -469,10 +493,12 @@ const styles = StyleSheet.create({
   },
   streakText: { color: colors.text, fontSize: 16, fontWeight: '800', fontVariant: ['tabular-nums'] },
   alert: { gap: spacing.sm, marginBottom: spacing.md },
-  ringWrap: { alignItems: 'center', marginTop: spacing.md },
-  steps: { color: colors.text, ...font.display, marginTop: 2 },
-  goal: { color: colors.textMuted, fontSize: 15, fontWeight: '600', fontVariant: ['tabular-nums'] },
-  message: { color: colors.textMuted, marginTop: spacing.md, textAlign: 'center', ...font.body },
+  hero: { paddingHorizontal: spacing.lg },
+  skyLabel: { color: 'rgba(247, 241, 234, 0.8)', ...font.label },
+  steps: { color: colors.text, ...font.display, fontSize: 64, marginTop: 4 },
+  goal: { color: 'rgba(247, 241, 234, 0.85)', fontSize: 15, fontWeight: '700', fontVariant: ['tabular-nums'] },
+  messageWrap: { alignItems: 'center', marginTop: spacing.sm },
+  message: { color: colors.textMuted, textAlign: 'center', ...font.body },
   stats: { flexDirection: 'row', marginTop: spacing.lg, alignItems: 'center' },
   divider: { width: 1, alignSelf: 'stretch', backgroundColor: colors.border, marginHorizontal: spacing.md },
   rowBetween: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm },

@@ -1,23 +1,27 @@
-// Identité « sport premium » : noir profond, une seule couleur d'accent,
-// gros chiffres, étiquettes en petites capitales. Pas d'emoji dans l'interface.
+// Identité « Sommet » : bleu nuit de montagne et orange de lever de soleil.
+// La journée est une ascension : gros chiffres, étiquettes en petites
+// capitales, une seule couleur d'accent. Pas d'emoji dans l'interface.
 export const colors = {
-  background: '#0A0A0B',
-  surface: '#141416',
-  surfaceAlt: '#1D1D20',
-  border: '#2A2A2E',
-  text: '#F5F5F7',
-  textMuted: '#8E8E93',
-  textFaint: '#5A5A60',
+  background: '#111A2E',
+  surface: '#1A2440',
+  surfaceAlt: '#24304F',
+  border: '#2E3B5E',
+  text: '#F7F1EA',
+  textMuted: '#A3B0CC',
+  textFaint: '#6B7899',
   /** L'unique couleur d'accent : actions, progression, mon équipe. */
-  primary: '#FF5A1F',
-  onPrimary: '#0A0A0B',
-  success: '#30D158',
-  danger: '#FF453A',
-  warning: '#FFD60A',
+  primary: '#FF8A4C',
+  onPrimary: '#121A2E',
+  success: '#4ADE9B',
+  danger: '#FF6B6B',
+  warning: '#FFD166',
 };
 
 /** Couleurs des pastilles de joueurs et d'équipes (jamais pour l'interface). */
-export const identityColors = ['#FF5A1F', '#3D8BFF', '#30D158', '#BF5AF2', '#FFD60A', '#64D2FF', '#FF375F', '#C9A26B'];
+export const identityColors = ['#FF8A4C', '#5B9BFF', '#4ADE9B', '#C38BFF', '#FFD166', '#6FD3F2', '#FF7A9C', '#D9B38C'];
+
+/** Police des textes dessinés en SVG : celle du système, aussi dans un navigateur. */
+export const SVG_FONT: string | undefined = typeof document === 'undefined' ? undefined : 'system-ui, -apple-system, sans-serif';
 
 export const spacing = { xs: 4, sm: 8, md: 16, lg: 24, xl: 32 };
 

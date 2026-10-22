@@ -2,6 +2,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
 import { Fragment } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import Svg, { Circle, Path, Text as SvgText } from 'react-native-svg';
 
 import { Avatar, Button, Card, SectionTitle } from '@/components/ui';
 import { warTimeLeft } from '@/lib/game';
@@ -15,7 +16,7 @@ import {
   type LeagueTarget,
 } from '@/lib/league';
 import { useAppStore } from '@/state/AppStore';
-import { colors, font, formatSteps, radius, spacing } from '@/theme';
+import { SVG_FONT, colors, font, formatSteps, radius, spacing } from '@/theme';
 
 function targetText(target: LeagueTarget | null, division: number): string {
   if (!target) return '';
@@ -33,18 +34,62 @@ function targetText(target: LeagueTarget | null, division: number): string {
   }
 }
 
-/** Les 5 niveaux, le mien en évidence. */
+// Les 5 niveaux comme des étapes d'altitude, du pied au sommet.
+const LEVEL_POINTS = [
+  { x: 40, y: 112 },
+  { x: 92, y: 90 },
+  { x: 142, y: 66 },
+  { x: 188, y: 42 },
+  { x: 228, y: 16 },
+];
+
+/** Les 5 niveaux sur la montagne, le mien en évidence. */
 function Ladder({ division }: { division: number }) {
   return (
     <View style={styles.ladder}>
-      {DIVISIONS.map((d) => (
-        <View key={d.level} style={{ flex: 1, gap: 6 }}>
-          <View style={[styles.step, d.level <= division && styles.stepOn]} />
-          <Text style={[styles.stepLabel, d.level === division && styles.stepLabelOn]} numberOfLines={1}>
-            {d.name}
-          </Text>
-        </View>
-      ))}
+      <Svg width="100%" height={128} viewBox="0 0 340 128" preserveAspectRatio="xMidYMax meet">
+        <Path d="M0 128 L228 10 L270 50 L300 34 L340 64 L340 128 Z" fill={colors.surface} />
+        <Path d="M228 10 L242 24 L234 22 L228 30 L220 21 L214 24 Z" fill={colors.text} opacity={0.9} />
+        <Path
+          d={`M${LEVEL_POINTS.map((p) => `${p.x} ${p.y}`).join(' L')}`}
+          fill="none"
+          stroke={colors.textFaint}
+          strokeWidth={2}
+          strokeDasharray="2 6"
+          strokeLinecap="round"
+        />
+        <Path
+          d={`M${LEVEL_POINTS.slice(0, division).map((p) => `${p.x} ${p.y}`).join(' L')}`}
+          fill="none"
+          stroke={colors.primary}
+          strokeWidth={3}
+          strokeLinecap="round"
+        />
+        {LEVEL_POINTS.map((p, i) => (
+          <Circle
+            key={i}
+            cx={p.x}
+            cy={p.y}
+            r={i + 1 === division ? 8 : 5}
+            fill={i + 1 <= division ? colors.primary : colors.surfaceAlt}
+            stroke={i + 1 === division ? colors.text : 'none'}
+            strokeWidth={2}
+          />
+        ))}
+        {LEVEL_POINTS.map((p, i) => (
+          <SvgText
+            key={DIVISIONS[i].name}
+            x={p.x + 12}
+            y={p.y + 4}
+            fontSize={11}
+            fontWeight="bold"
+            fontFamily={SVG_FONT}
+            fill={i + 1 === division ? colors.text : colors.textMuted}
+          >
+            {DIVISIONS[i].name}
+          </SvgText>
+        ))}
+      </Svg>
     </View>
   );
 }
@@ -125,7 +170,7 @@ export function LeagueView() {
       <Card style={styles.hero}>
         <View style={styles.heroTop}>
           <View style={styles.badge}>
-            <Ionicons name="trophy" size={22} color={colors.onPrimary} />
+            <Ionicons name="trending-up" size={22} color={colors.onPrimary} />
           </View>
           <View style={{ flex: 1 }}>
             <Text style={styles.label}>Niveau {league.division}</Text>
@@ -208,11 +253,7 @@ const styles = StyleSheet.create({
     paddingTop: spacing.md,
   },
   footerText: { color: colors.text, fontWeight: '700', flex: 1 },
-  ladder: { flexDirection: 'row', gap: 6, marginTop: spacing.md },
-  step: { height: 4, borderRadius: 2, backgroundColor: colors.surfaceAlt },
-  stepOn: { backgroundColor: colors.primary },
-  stepLabel: { color: colors.textFaint, fontSize: 11, fontWeight: '700', textAlign: 'center' },
-  stepLabelOn: { color: colors.text },
+  ladder: { marginTop: spacing.md },
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingVertical: spacing.sm + 2 },
   rowBorder: { borderTopWidth: 1, borderTopColor: colors.border },
   rowMe: { backgroundColor: colors.surfaceAlt, marginHorizontal: -spacing.md, paddingHorizontal: spacing.md },

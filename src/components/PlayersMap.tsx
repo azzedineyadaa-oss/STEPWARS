@@ -92,7 +92,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: 'rgba(20, 20, 22, 0.94)',
+    backgroundColor: 'rgba(26, 36, 64, 0.94)',
     borderWidth: 1.5,
     borderRadius: radius.pill,
     paddingVertical: 3,

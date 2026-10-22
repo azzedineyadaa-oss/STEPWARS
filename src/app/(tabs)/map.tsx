@@ -209,7 +209,7 @@ export default function MapScreen() {
   );
 }
 
-const glass = { backgroundColor: 'rgba(20, 20, 22, 0.94)', borderColor: colors.border, borderWidth: 1 } as const;
+const glass = { backgroundColor: 'rgba(26, 36, 64, 0.94)', borderColor: colors.border, borderWidth: 1 } as const;
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },

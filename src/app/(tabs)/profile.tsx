@@ -198,7 +198,7 @@ export default function ProfileScreen() {
         </View>
         {showQr && profile.friendCode ? (
           <View style={styles.qr}>
-            <QRCode value={friendInviteUrl(profile.friendCode)} size={196} color="#0A0A0B" backgroundColor="#FFFFFF" />
+            <QRCode value={friendInviteUrl(profile.friendCode)} size={196} color="#111A2E" backgroundColor="#FFFFFF" />
           </View>
         ) : null}
         <View style={styles.inviteRow}>

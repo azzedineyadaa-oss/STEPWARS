@@ -42,7 +42,7 @@ export function Celebration({
             { opacity: appear, transform: [{ translateY: appear.interpolate({ inputRange: [0, 1], outputRange: [24, 0] }) }] },
           ]}
         >
-          <Text style={styles.kicker}>OBJECTIF ATTEINT</Text>
+          <Text style={styles.kicker}>SOMMET ATTEINT</Text>
           <Text style={styles.number}>{formatSteps(steps)}</Text>
           <Text style={styles.unit}>pas aujourd’hui</Text>
           <Animated.View style={[styles.line, { transform: [{ scaleX: line }] }]} />
