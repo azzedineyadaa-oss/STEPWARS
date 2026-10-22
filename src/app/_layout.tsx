@@ -49,10 +49,14 @@ function RootNavigator() {
         <Stack.Screen name="challenge/[id]" options={{ title: 'Duel' }} />
         <Stack.Screen name="team/new" options={{ title: 'Guerre d’équipes', presentation: 'modal' }} />
         <Stack.Screen name="player/[id]" options={{ title: 'Joueur', presentation: 'modal' }} />
+        <Stack.Screen name="add/[code]" options={{ title: 'Invitation', presentation: 'modal' }} />
+        <Stack.Screen name="join/[code]" options={{ title: 'Invitation', presentation: 'modal' }} />
       </Stack.Protected>
       <Stack.Protected guard={!settings.onboarded}>
         <Stack.Screen name="onboarding" options={{ headerShown: false }} />
       </Stack.Protected>
+      {/* Accessible avant l'accueil (« J'ai déjà un compte ») comme après. */}
+      <Stack.Screen name="account" options={{ title: 'Compte', presentation: 'modal' }} />
     </Stack>
   );
 }

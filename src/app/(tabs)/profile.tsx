@@ -1,7 +1,11 @@
+import Ionicons from '@expo/vector-icons/Ionicons';
+import { router } from 'expo-router';
 import { useState } from 'react';
-import { Alert, ScrollView, Share, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, Pressable, ScrollView, Share, StyleSheet, Text, TextInput, View } from 'react-native';
+import QRCode from 'react-native-qrcode-svg';
 
 import { Avatar, Button, Card, Chip, SectionTitle, StatusBanner } from '@/components/ui';
+import { friendInviteMessage, friendInviteUrl } from '@/lib/invite';
 import { requestReminderPermission } from '@/lib/reminders';
 import { useAppStore } from '@/state/AppStore';
 import { colors, font, formatSteps, radius, spacing } from '@/theme';
@@ -14,9 +18,21 @@ function errorMessage(e: unknown) {
 }
 
 export default function ProfileScreen() {
-  const { mode, myId, profile, updateProfile, friends, addFriend, removeFriend, deleteAccount, settings, setReminderHour } =
-    useAppStore();
+  const {
+    mode,
+    myId,
+    profile,
+    accountEmail,
+    updateProfile,
+    friends,
+    addFriend,
+    removeFriend,
+    deleteAccount,
+    settings,
+    setReminderHour,
+  } = useAppStore();
   const [friendInput, setFriendInput] = useState('');
+  const [showQr, setShowQr] = useState(false);
   const [busy, setBusy] = useState(false);
   const online = mode === 'online';
 
@@ -55,10 +71,7 @@ export default function ProfileScreen() {
     setReminderHour(hour);
   };
 
-  const onShareCode = () =>
-    Share.share({
-      message: `Défie-moi sur StepWars ! Mon code ami : ${profile.friendCode}`,
-    });
+  const onShareCode = () => Share.share({ message: friendInviteMessage(profile.friendCode) });
 
   const onDeleteAccount = () => {
     Alert.alert(
@@ -96,6 +109,26 @@ export default function ProfileScreen() {
         </View>
       </View>
 
+      {accountEmail ? (
+        <View style={styles.saved}>
+          <Ionicons name="shield-checkmark" size={18} color={colors.success} />
+          <Text style={styles.savedText} numberOfLines={1}>
+            Compte sauvegardé · {accountEmail}
+          </Text>
+        </View>
+      ) : (
+        <Pressable onPress={() => router.push('/account')}>
+          <Card style={styles.backup}>
+            <Ionicons name="shield-outline" size={24} color={colors.primary} />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.backupTitle}>Sauvegarde ta progression</Text>
+              <Text style={styles.small}>Ajoute ton e-mail pour ne rien perdre si tu changes de téléphone.</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+          </Card>
+        </Pressable>
+      )}
+
       <SectionTitle>Pseudo</SectionTitle>
       <TextInput
         style={styles.input}
@@ -126,15 +159,32 @@ export default function ProfileScreen() {
         ))}
       </View>
 
-      <SectionTitle>Mon code ami</SectionTitle>
-      <Card style={styles.codeCard}>
-        <View style={{ flex: 1 }}>
+      <SectionTitle>Inviter des amis</SectionTitle>
+      <Card style={{ gap: spacing.md }}>
+        <View>
+          <Text style={styles.label}>Mon code ami</Text>
           <Text style={styles.code}>{profile.friendCode || '······'}</Text>
-          <Text style={styles.small}>Partage ce code pour que tes amis t’ajoutent.</Text>
+          <Text style={styles.small}>Envoie le lien, ou fais scanner le QR code avec l’appareil photo.</Text>
         </View>
-        {online && profile.friendCode ? (
-          <Button title="Partager" variant="secondary" icon="share-outline" onPress={onShareCode} />
+        {showQr && profile.friendCode ? (
+          <View style={styles.qr}>
+            <QRCode value={friendInviteUrl(profile.friendCode)} size={196} color="#0A0A0B" backgroundColor="#FFFFFF" />
+          </View>
         ) : null}
+        <View style={styles.inviteRow}>
+          <View style={{ flex: 1 }}>
+            <Button title="Inviter" icon="share-outline" onPress={onShareCode} disabled={!profile.friendCode} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Button
+              title={showQr ? 'Masquer' : 'QR code'}
+              variant="secondary"
+              icon="qr-code-outline"
+              onPress={() => setShowQr((v) => !v)}
+              disabled={!profile.friendCode}
+            />
+          </View>
+        </View>
       </Card>
 
       <SectionTitle>Amis ({friends.length})</SectionTitle>
@@ -171,7 +221,9 @@ export default function ProfileScreen() {
         <>
           <SectionTitle>Compte</SectionTitle>
           <Text style={[styles.small, { marginBottom: spacing.sm }]}>
-            Ton compte est lié à ce téléphone, sans e-mail. Si tu désinstalles l’app, il sera perdu.
+            {accountEmail
+              ? `Lié à ${accountEmail}. Sur un autre téléphone, choisis « J’ai déjà un compte ».`
+              : 'Ton compte est lié à ce téléphone, sans e-mail. Si tu désinstalles l’app sans l’avoir sauvegardé, il sera perdu.'}
           </Text>
           <Button title="Supprimer mon compte" variant="danger" onPress={onDeleteAccount} />
         </>
@@ -197,8 +249,14 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginTop: spacing.sm },
   headerName: { color: colors.text, ...font.title },
   headerMeta: { color: colors.textMuted, fontWeight: '600', marginTop: 2 },
-  codeCard: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  code: { color: colors.text, fontSize: 26, fontWeight: '800', letterSpacing: 4, fontVariant: ['tabular-nums'] },
+  label: { color: colors.textMuted, ...font.label },
+  inviteRow: { flexDirection: 'row', gap: spacing.sm },
+  qr: { alignSelf: 'center', padding: spacing.md, backgroundColor: '#FFFFFF', borderRadius: radius.lg },
+  backup: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginTop: spacing.md, borderColor: colors.primary, borderWidth: 1 },
+  backupTitle: { color: colors.text, ...font.heading },
+  saved: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.md },
+  savedText: { color: colors.textMuted, fontWeight: '600', flex: 1 },
+  code: { color: colors.text, fontSize: 30, fontWeight: '800', letterSpacing: 6, marginTop: 4, fontVariant: ['tabular-nums'] },
   small: { color: colors.textMuted, fontSize: 13, fontWeight: '500', marginTop: 2 },
   friendRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingVertical: spacing.sm + 2 },
   rowBorder: { borderTopWidth: 1, borderTopColor: colors.border },

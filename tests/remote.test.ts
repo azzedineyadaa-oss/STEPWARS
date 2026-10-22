@@ -63,6 +63,15 @@ test('friendlyError traduit les erreurs SQL connues', () => {
   assert.equal(friendlyError(undefined), 'Une erreur est survenue. Réessayez.');
 });
 
+test('friendlyError traduit les erreurs de connexion par e-mail', () => {
+  assert.equal(friendlyError('Token has expired or is invalid'), 'Code incorrect ou expiré. Vérifie-le ou demande un nouveau code.');
+  assert.equal(friendlyError('For security purposes, you can only request this after 42 seconds.'), 'Trop de demandes. Réessaie dans quelques minutes.');
+  assert.equal(friendlyError('email rate limit exceeded'), 'Trop de demandes. Réessaie dans quelques minutes.');
+  assert.equal(friendlyError('Signups not allowed for otp'), 'Aucun compte n’utilise cette adresse.');
+  assert.equal(friendlyError('A user with this email address has already been registered'), 'Cette adresse est déjà liée à un autre compte.');
+  assert.equal(friendlyError('Email address "abc" is invalid'), 'Cette adresse e-mail n’est pas valide.');
+});
+
 test('équipes : conversion des lignes', () => {
   assert.deepEqual(teamStandingFromRow({ id: 't', name: 'A', emoji: '🚀', members: 3, steps: '123456' }), {
     id: 't',

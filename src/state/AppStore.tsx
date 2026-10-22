@@ -72,6 +72,8 @@ type PersistedState = {
   uploaded: StepHistory;
   /** Compte auquel appartiennent les données en cache. */
   accountId: string | null;
+  /** Adresse qui permet de retrouver le compte sur un autre téléphone (null : compte anonyme). */
+  accountEmail: string | null;
 };
 
 type AppStore = PersistedState & {
@@ -105,6 +107,12 @@ type AppStore = PersistedState & {
   simulateSteps: ((steps: number) => void) | null;
   /** Supprime le compte et toutes ses données (en ligne uniquement). */
   deleteAccount: () => Promise<void>;
+  /** Sauvegarde : envoie un code à l'adresse, puis la lie au compte une fois le code saisi. */
+  requestEmailLink: (email: string) => Promise<void>;
+  confirmEmailLink: (email: string, code: string) => Promise<void>;
+  /** Autre téléphone : envoie un code, puis remplace ce compte par celui de l'adresse. */
+  requestLogin: (email: string) => Promise<void>;
+  confirmLogin: (email: string, code: string) => Promise<void>;
   refresh: () => Promise<void>;
   /** Après une erreur : rouvre la session si besoin, sinon rafraîchit. */
   retry: () => void;
@@ -128,6 +136,7 @@ function initialState(): PersistedState {
     playerSteps: {},
     uploaded: {},
     accountId: null,
+    accountEmail: null,
   };
 }
 
@@ -197,9 +206,15 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!supabase || !ready) return;
     let cancelled = false;
+    const db = supabase;
     api
-      .ensureSession(supabase)
-      .then((id) => !cancelled && setUserId(id))
+      .ensureSession(db)
+      .then(async (id) => {
+        if (cancelled) return;
+        setUserId(id);
+        const accountEmail = await api.currentEmail(db);
+        if (!cancelled) setState((s) => (s.accountEmail === accountEmail ? s : { ...s, accountEmail }));
+      })
       .catch((e) => !cancelled && setSync({ status: 'error', message: messageOf(e) }));
     return () => {
       cancelled = true;
@@ -390,6 +405,47 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     setSessionNonce((n) => n + 1);
   }, [requireOnline]);
 
+  // --- Compte par e-mail -------------------------------------------------------
+  // En démo, rien n'est envoyé : n'importe quel code à 6 chiffres est accepté.
+
+  const checkCode = (code: string) => {
+    if (!/^\d{6}$/.test(code.trim())) throw new api.ApiError('Le code fait 6 chiffres.');
+  };
+
+  const requestEmailLink = useCallback(
+    async (email: string) => {
+      if (mode === 'online') await api.requestEmailLink(requireOnline().db, email);
+    },
+    [requireOnline],
+  );
+
+  const confirmEmailLink = useCallback(
+    async (email: string, code: string) => {
+      checkCode(code);
+      if (mode === 'online') await api.confirmEmailLink(requireOnline().db, email, code);
+      setState((s) => ({ ...s, accountEmail: email.trim().toLowerCase() }));
+    },
+    [requireOnline],
+  );
+
+  const requestLogin = useCallback(async (email: string) => {
+    if (mode === 'online' && supabase) await api.requestLoginCode(supabase, email);
+  }, []);
+
+  const confirmLogin = useCallback(
+    async (email: string, code: string) => {
+      checkCode(code);
+      if (mode === 'online' && supabase) {
+        const id = await api.confirmLoginCode(supabase, email, code);
+        // Les pas de ce téléphone restent et seront envoyés sur le compte retrouvé.
+        pendingProfile.current = null;
+        setUserId(id);
+      }
+      setState((s) => ({ ...s, accountEmail: email.trim().toLowerCase() }));
+    },
+    [],
+  );
+
   const retry = useCallback(() => {
     if (userId) refresh();
     else {
@@ -546,6 +602,10 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       markCelebrated,
       simulateSteps: canSimulate ? simulateSteps : null,
       deleteAccount,
+      requestEmailLink,
+      confirmEmailLink,
+      requestLogin,
+      confirmLogin,
       refresh,
       retry,
       friendHistory,
@@ -575,6 +635,10 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       canSimulate,
       simulateSteps,
       deleteAccount,
+      requestEmailLink,
+      confirmEmailLink,
+      requestLogin,
+      confirmLogin,
       refresh,
       retry,
       friendHistory,

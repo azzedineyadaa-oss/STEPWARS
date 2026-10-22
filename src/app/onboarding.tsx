@@ -1,4 +1,5 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { router } from 'expo-router';
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -77,7 +78,14 @@ export default function OnboardingScreen() {
                 </View>
               ))}
             </View>
-            <Button title="Commencer" onPress={next} />
+            <View style={{ gap: spacing.sm }}>
+              <Button title="Commencer" onPress={next} />
+              <Button
+                title="J’ai déjà un compte"
+                variant="ghost"
+                onPress={() => router.push({ pathname: '/account', params: { mode: 'login' } })}
+              />
+            </View>
           </View>
         )}
 

@@ -47,6 +47,15 @@ Les deux valeurs du projet de production sont dans `.env`, versionné : elles so
 
 Ces deux valeurs sont **publiques** : elles se retrouvent dans l'app installée, et c'est prévu ainsi. La sécurité repose sur les règles de la base. Ne mettez **jamais** la clé `secret` ou `service_role` dans l'app.
 
+### Comptes par e-mail (code à 6 chiffres)
+
+Le compte est d'abord anonyme. Dans le profil, « Sauvegarde ta progression » lui ajoute une adresse (`updateUser` puis `verifyOtp` de type `email_change`). Sur un autre téléphone, « J'ai déjà un compte » envoie un code de connexion sans jamais créer de compte (`signInWithOtp` avec `shouldCreateUser: false`, puis `verifyOtp` de type `email`).
+
+Réglages Supabase nécessaires, dans **Authentication** :
+- **Emails**, puis **Templates** : les modèles **Magic Link** et **Change Email Address** doivent afficher le code avec `{{ .Token }}`, sinon l'e-mail ne contient qu'un lien inutilisable dans l'app.
+- **Sign In / Providers**, puis **Email** : laissez la longueur du code (**Email OTP Length**) à 6 chiffres.
+- **Avant le lancement :** le serveur d'e-mails fourni par Supabase n'envoie que quelques e-mails par heure. Branchez un SMTP (Resend, Brevo…) dans **Emails**, puis **SMTP Settings**.
+
 ### 4. Vérifier
 
 Installez l'app sur deux téléphones. Sur le premier, onglet Profil, notez le code ami. Sur le second, saisissez ce code dans « Code ami », puis lancez un défi. Les deux téléphones doivent voir le défi et les pas de l'autre, avec 5 minutes de délai au plus. Tirer pour rafraîchir n'existe pas encore ; revenir dans l'app déclenche une mise à jour.

@@ -155,6 +155,11 @@ export function friendlyError(message: string | undefined): string {
   if (message.includes('player_not_visible')) return 'Ce joueur n’est plus visible.';
   if (message.includes('cannot_block_self') || message.includes('cannot_report_self')) return 'C’est toi !';
   if (message.includes('not_authenticated')) return 'Connexion au serveur perdue. Relancez l’app.';
+  if (/expired|invalid.*(token|otp)|otp.*invalid/i.test(message)) return 'Code incorrect ou expiré. Vérifie-le ou demande un nouveau code.';
+  if (/rate limit|security purposes|only request this/i.test(message)) return 'Trop de demandes. Réessaie dans quelques minutes.';
+  if (/signups not allowed|user not found/i.test(message)) return 'Aucun compte n’utilise cette adresse.';
+  if (/already (been )?registered|already exists|email_exists/i.test(message)) return 'Cette adresse est déjà liée à un autre compte.';
+  if (/invalid.*email|email.*invalid|validate email/i.test(message)) return 'Cette adresse e-mail n’est pas valide.';
   if (/network|fetch/i.test(message)) return 'Pas de connexion internet.';
   return 'Une erreur est survenue. Réessayez.';
 }

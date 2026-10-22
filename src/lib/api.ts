@@ -48,6 +48,37 @@ export async function ensureSession(db: SupabaseClient): Promise<string> {
   return signIn.user.id;
 }
 
+/** Adresse e-mail du compte, ou null tant qu'il est anonyme. */
+export async function currentEmail(db: SupabaseClient): Promise<string | null> {
+  const { data } = await db.auth.getSession();
+  return data.session?.user.email || null;
+}
+
+/**
+ * Sauvegarde du compte anonyme : envoie un code à 6 chiffres à `email`.
+ * Le compte (pas, amis, duels) reste le même, il gagne juste une adresse.
+ */
+export async function requestEmailLink(db: SupabaseClient, email: string): Promise<void> {
+  const { error } = await db.auth.updateUser({ email: email.trim().toLowerCase() });
+  if (error) throw new ApiError(friendlyError(error.message));
+}
+
+export async function confirmEmailLink(db: SupabaseClient, email: string, code: string): Promise<void> {
+  check(await db.auth.verifyOtp({ email: email.trim().toLowerCase(), token: code.trim(), type: 'email_change' }));
+}
+
+/** Nouveau téléphone : envoie un code de connexion, sans jamais créer de compte. */
+export async function requestLoginCode(db: SupabaseClient, email: string): Promise<void> {
+  check(await db.auth.signInWithOtp({ email: email.trim().toLowerCase(), options: { shouldCreateUser: false } }));
+}
+
+/** Remplace la session en cours par celle du compte retrouvé ; renvoie son identifiant. */
+export async function confirmLoginCode(db: SupabaseClient, email: string, code: string): Promise<string> {
+  const { user } = check(await db.auth.verifyOtp({ email: email.trim().toLowerCase(), token: code.trim(), type: 'email' }));
+  if (!user) throw new ApiError(friendlyError(undefined));
+  return user.id;
+}
+
 export type Snapshot = {
   profile: ProfileRow;
   friends: Friend[];

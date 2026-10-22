@@ -9,10 +9,11 @@ import { colors, font, identityColor, initials, radius, spacing } from '@/theme'
 export type IconName = ComponentProps<typeof Ionicons>['name'];
 
 /** Petit retour haptique (ignoré sur le web). */
-export function tap(kind: 'light' | 'selection' | 'success' = 'light') {
+export function tap(kind: 'light' | 'selection' | 'success' | 'error' = 'light') {
   if (Platform.OS === 'web') return;
   if (kind === 'selection') Haptics.selectionAsync();
   else if (kind === 'success') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+  else if (kind === 'error') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
   else Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 }
 

@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Avatar, Button, Card, SectionTitle, StatusBanner, TeamBadge, type IconName } from '@/components/ui';
 import { isoWeek, memberContribution, nextTarget, rankByScore, warTimeLeft } from '@/lib/game';
+import { teamInviteMessage } from '@/lib/invite';
 import { useAppStore } from '@/state/AppStore';
 import { colors, font, formatSteps, spacing } from '@/theme';
 
@@ -75,7 +76,7 @@ export default function WarScreen() {
   const teamTotal = Math.max(1, contributions.reduce((sum, m) => sum + m.steps, 0));
 
   const onInvite = () =>
-    Share.share({ message: `Rejoins mon équipe ${team.name} sur StepWars. Code d’équipe : ${team.code}` });
+    Share.share({ message: teamInviteMessage(team.name, team.code) });
 
   const onLeave = () =>
     Alert.alert('Quitter l’équipe ?', 'Tes pas ne compteront plus pour elle cette semaine.', [
