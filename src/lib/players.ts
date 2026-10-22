@@ -138,7 +138,7 @@ export function demoPlayersAround(
   if (visibility !== 'public') return friendPlayers;
   const strangers = DEMO_STRANGERS.map((s, i) => {
     const id = `demo-stranger-${i}`;
-    return player(id, s.name, s.avatar, false, coarseCell(place(id, 9)));
+    return player(id, s.name, s.avatar, false, coarseCell(place(id, 6)));
   });
   return [...friendPlayers, ...strangers];
 }

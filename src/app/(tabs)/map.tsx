@@ -1,7 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Alert, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Linking, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { PlayersMap, type MapBubble, type PlayersMapHandle } from '@/components/PlayersMap';
@@ -31,6 +31,7 @@ export default function MapScreen() {
 
   const [initialRegion] = useState<Region>(() => ({ ...(lastPosition ?? DEFAULT_CENTER), ...ZOOM }));
   const [listOpen, setListOpen] = useState(true);
+  const [confirmPublic, setConfirmPublic] = useState(false);
 
   // Recentre sur le joueur la première fois qu'on connaît sa position.
   const centered = useRef(lastPosition !== null);
@@ -75,22 +76,18 @@ export default function MapScreen() {
 
   const onRecenter = () => mapRef.current?.recenter({ ...here, ...ZOOM });
 
+  const apply = (mode: MapVisibility) =>
+    setVisibility(mode).catch((e) => Alert.alert('Erreur', e instanceof Error ? e.message : undefined));
+
   const choose = (mode: MapVisibility) => {
     if (mode === visibility) return;
-    const apply = () => setVisibility(mode).catch((e) => Alert.alert('Erreur', e instanceof Error ? e.message : undefined));
-    if (mode === 'public') {
-      Alert.alert(
-        'Apparaître pour tout le monde ?',
-        'Les joueurs à moins de 2 km verront ton pseudo, tes pas du jour et ta position arrondie à environ 600 m, tant que l’app est ouverte. En échange, tu les verras aussi.\n\nRéservé aux 16 ans et plus.',
-        [
-          { text: 'Annuler', style: 'cancel' },
-          { text: 'J’ai 16 ans ou plus', onPress: apply },
-        ],
-      );
-    } else {
-      apply();
-    }
+    // Passer en public demande une confirmation explicite (et l'âge).
+    if (mode === 'public') setConfirmPublic(true);
+    else apply(mode);
   };
+
+  // Aperçu web : pas de position, on montre quand même la liste autour du point par défaut.
+  const showPlayers = location === 'granted' || Platform.OS === 'web';
 
   const onEnableLocation = async () => {
     if (location === 'denied') Linking.openSettings();
@@ -108,8 +105,7 @@ export default function MapScreen() {
         onPlayerPress={openPlayer}
       />
 
-      {Platform.OS !== 'web' && (
-        <>
+      <>
           <View style={[styles.top, { top: insets.top + spacing.sm }]} pointerEvents="box-none">
             <View style={styles.modes}>
               {MODES.map((m) => (
@@ -130,12 +126,12 @@ export default function MapScreen() {
                 : visibility === 'friends'
                   ? 'Seuls tes amis te voient.'
                   : 'Les marcheurs proches te voient (position arrondie).'}
-              {appMode === 'demo' ? ' · Démo' : ''}
+              {appMode === 'demo' ? (Platform.OS === 'web' ? ' · Démo, plan simplifié' : ' · Démo') : ''}
             </Text>
           </View>
 
           <View style={[styles.bottom, { bottom: spacing.md }]} pointerEvents="box-none">
-            {location !== 'granted' ? (
+            {!showPlayers ? (
               <View style={styles.card}>
                 <Text style={styles.cardTitle}>📍 Active ta position</Text>
                 <Text style={styles.line}>Pour voir les marcheurs autour de toi. Elle sert seulement quand l’app est ouverte.</Text>
@@ -188,8 +184,31 @@ export default function MapScreen() {
               </Pressable>
             )}
           </View>
-        </>
-      )}
+      </>
+
+      <Modal visible={confirmPublic} transparent animationType="fade" onRequestClose={() => setConfirmPublic(false)}>
+        <View style={styles.backdrop}>
+          <View style={styles.sheet}>
+            <Text style={styles.sheetIcon}>🌍</Text>
+            <Text style={styles.sheetTitle}>Apparaître pour tout le monde ?</Text>
+            <Text style={styles.sheetText}>
+              Les marcheurs à moins de 2 km verront ton pseudo, tes pas du jour et ta position arrondie à environ 600 m,
+              tant que l’app est ouverte. En échange, tu les verras aussi.
+            </Text>
+            <Text style={styles.sheetText}>Tu peux repasser en fantôme à tout moment. Réservé aux 16 ans et plus.</Text>
+            <View style={{ gap: spacing.sm, alignSelf: 'stretch', marginTop: spacing.sm }}>
+              <Button
+                title="J’ai 16 ans ou plus, me montrer"
+                onPress={() => {
+                  setConfirmPublic(false);
+                  apply('public');
+                }}
+              />
+              <Button title="Annuler" variant="ghost" onPress={() => setConfirmPublic(false)} />
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -219,6 +238,11 @@ const styles = StyleSheet.create({
   rowName: { color: colors.text, fontWeight: '800', fontSize: 15 },
   rowMeta: { color: colors.textMuted, fontSize: 12, fontWeight: '600' },
   rowSteps: { color: colors.text, fontWeight: '900' },
+  backdrop: { flex: 1, backgroundColor: 'rgba(5, 6, 15, 0.8)', justifyContent: 'center', padding: spacing.lg },
+  sheet: { ...panel, borderRadius: radius.lg, padding: spacing.lg, alignItems: 'center', gap: spacing.sm, maxWidth: 420, alignSelf: 'center' },
+  sheetIcon: { fontSize: 48 },
+  sheetTitle: { color: colors.text, ...font.title, textAlign: 'center' },
+  sheetText: { color: colors.textMuted, ...font.body, textAlign: 'center' },
   round: {
     ...panel,
     width: 48,

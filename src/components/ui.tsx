@@ -168,7 +168,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     alignItems: 'center',
   },
-  buttonText: { color: colors.text, fontSize: 16, fontWeight: '800', letterSpacing: 0.2 },
+  buttonText: { color: colors.text, fontSize: 16, fontWeight: '800', letterSpacing: 0.2, textAlign: 'center' },
   chip: {
     borderRadius: radius.pill,
     borderWidth: 1,
