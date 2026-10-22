@@ -34,7 +34,8 @@ select public.record_steps(jsonb_build_array(
 select public.record_steps(jsonb_build_array(jsonb_build_object('day', current_date, 'steps', 3000)));
 select pg_temp.check((select steps = 5000 from public.daily_steps where day = current_date), 'le total du jour ne peut pas baisser');
 select pg_temp.check((select count(*) = 2 from public.daily_steps), 'les jours trop anciens sont ignorés');
-select pg_temp.expect_error($$select public.record_steps(jsonb_build_array(jsonb_build_object('day', current_date, 'steps', 999999)))$$, 'daily_steps_steps_check');
+select public.record_steps(jsonb_build_array(jsonb_build_object('day', current_date, 'steps', 999999)));
+select pg_temp.check((select steps <= 7000 from public.daily_steps where day = current_date), 'un chiffre absurde n’est pas crédité');
 reset role;
 
 select pg_temp.check((select name = 'Joueur' from public.profiles where id = '00000000-0000-0000-0000-00000000000b'), 'on ne peut pas modifier le profil des autres');

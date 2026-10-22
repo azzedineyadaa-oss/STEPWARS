@@ -17,7 +17,7 @@ L'app utilise [Supabase](https://supabase.com) pour les comptes, les amis, les p
 | Inconnus sur la carte | Visibles seulement entre joueurs publics (**réciprocité**), à moins de 2 km de sa propre position, avec une position **arrondie à environ 600 m**. Seuls le pseudo, l'avatar, l'équipe et les pas du jour apparaissent. **Blocage** dans les deux sens (met aussi fin à l'amitié) et retrait de la carte publique après **3 signalements** distincts. La fiche d'un joueur ne donne que des totaux (pas, série, rang, bilan de duels) |
 | Suppression de compte | Bouton dans l'onglet Profil, qui efface tout (obligatoire pour l'App Store) |
 
-Le schéma est dans `supabase/migrations/` : `20261021000000_init.sql` (profils, amis, pas, duels) puis `20261022000000_teams.sql` (guerre d'équipes) `20261023000000_map.sql` puis `20261024000000_players_map.sql` (carte des joueurs).
+Le schéma est dans `supabase/migrations/` : `20261021000000_init.sql` (profils, amis, pas, duels) puis `20261022000000_teams.sql` (guerre d'équipes) `20261023000000_map.sql` puis `20261024000000_players_map.sql` (carte des joueurs) et `20261025000000_anticheat.sql` (limites anti-triche).
 
 ## Mise en place
 
@@ -29,7 +29,7 @@ Le schéma est dans `supabase/migrations/` : `20261021000000_init.sql` (profils,
 
 ### 2. Créer les tables
 
-**Option simple :** ouvrez **SQL Editor**, puis **New query**. Collez le contenu de `supabase/migrations/20261021000000_init.sql` et cliquez sur **Run**, puis faites de même avec `20261022000000_teams.sql`, puis `20261023000000_map.sql`, puis `20261024000000_players_map.sql`. L'ordre compte.
+**Option simple :** ouvrez **SQL Editor**, puis **New query**. Collez le contenu de `supabase/migrations/20261021000000_init.sql` et cliquez sur **Run**, puis faites de même avec `20261022000000_teams.sql`, puis `20261023000000_map.sql`, puis `20261024000000_players_map.sql`, puis `20261025000000_anticheat.sql`. L'ordre compte.
 
 **Option CLI :** elle est préférable pour les futures migrations.
 
@@ -80,6 +80,6 @@ Cette commande teste de bout en bout le code de l'app (`src/lib/api.ts`), avec l
 ## Limites connues
 
 - **Comptes anonymes :** si un joueur désinstalle l'app ou change de téléphone, il perd son compte. Sur iOS, les pas des 7 derniers jours reviennent depuis le téléphone, mais pas les amis. Prochaine étape : « Se connecter avec Apple » et « avec Google », que Supabase sait rattacher au compte anonyme existant.
-- **Triche :** les pas sont déclarés par le téléphone. Le serveur plafonne à 200 000 pas par jour et refuse les modifications d'anciens jours, mais un utilisateur déterminé peut envoyer de faux chiffres. Pour un vrai contrôle, il faudrait lire les pas via HealthKit et Health Connect, et détecter les valeurs aberrantes.
+- **Triche :** les pas sont déclarés par le téléphone. Le serveur ne crédite que des pas possibles : 100 000 par jour au plus, et 200 pas par minute écoulée depuis le dernier envoi, plus 2 000 de marge (`record_steps` renvoie les pas crédités). Les anciens jours ne sont pas modifiables. Ces limites bloquent les faux envois, pas quelqu'un qui secoue son téléphone pendant des heures : pour ça, il faudra lire les pas via HealthKit et Health Connect et repérer les profils aberrants.
 - **Pas de temps réel :** les données des amis se mettent à jour toutes les 5 minutes et à chaque retour dans l'app. Supabase Realtime pourra rendre les duels instantanés.
 - **Déclarations des stores :** avec un serveur, la fiche de confidentialité change. Les pas sont désormais **collectés** et **liés à un identifiant** (le compte anonyme). Mettez à jour la fiche App Store, la section « Sécurité des données » du Play Store et votre politique de confidentialité, en indiquant l'hébergeur Supabase et la région choisie.
