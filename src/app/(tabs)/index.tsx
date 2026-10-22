@@ -59,17 +59,23 @@ function RecapCard() {
         {recap.position}
         {recap.position === 1 ? 'er' : 'e'} sur {recap.members} · {formatSteps(recap.steps)} pas dans la semaine
       </Text>
-      <View style={styles.cta}>
-        <Text
-          style={styles.ctaText}
-          onPress={() => {
-            dismissRecap();
-            router.navigate('/war');
-          }}
-        >
-          Voir ma nouvelle ligue
-        </Text>
-        <Ionicons name="arrow-forward" size={16} color={colors.primary} />
+      <View style={styles.rowBetween}>
+        <View style={styles.cta}>
+          <Text
+            style={styles.ctaText}
+            onPress={() => {
+              dismissRecap();
+              router.navigate('/war');
+            }}
+          >
+            Voir ma nouvelle ligue
+          </Text>
+          <Ionicons name="arrow-forward" size={16} color={colors.primary} />
+        </View>
+        <Pressable style={styles.cta} onPress={() => router.push({ pathname: '/share', params: { kind: 'week' } })}>
+          <Ionicons name="share-outline" size={16} color={colors.primary} />
+          <Text style={styles.ctaText}>Partager</Text>
+        </Pressable>
       </View>
     </Card>
   );
@@ -327,6 +333,12 @@ export default function HomeScreen() {
             <Text style={styles.goal}>/ {formatSteps(goal)} pas</Text>
           </ProgressRing>
           <Text style={styles.message}>{message(todaySteps, goal)}</Text>
+          {done && (
+            <Pressable style={styles.shareLink} onPress={() => router.push('/share')}>
+              <Ionicons name="share-outline" size={16} color={colors.primary} />
+              <Text style={styles.ctaText}>Partager ma journée</Text>
+            </Pressable>
+          )}
         </View>
 
         <Card style={styles.stats}>
@@ -418,12 +430,17 @@ export default function HomeScreen() {
             : 'Premier jour de ta série. Reviens demain pour la prolonger.'
         }
         onClose={markCelebrated}
+        onShare={() => {
+          markCelebrated();
+          router.push('/share');
+        }}
       />
     </>
   );
 }
 
 const styles = StyleSheet.create({
+  shareLink: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: spacing.sm, padding: spacing.xs },
   recap: { borderWidth: 1, marginTop: spacing.md, gap: spacing.xs },
   recapTitle: { color: colors.text, ...font.title, marginTop: spacing.xs },
   joker: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.sm, paddingHorizontal: spacing.xs },

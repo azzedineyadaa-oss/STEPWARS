@@ -10,11 +10,14 @@ export function Celebration({
   steps,
   subtitle,
   onClose,
+  onShare,
 }: {
   visible: boolean;
   steps: number;
   subtitle: string;
   onClose: () => void;
+  /** Ferme la fête et ouvre le partage. */
+  onShare?: () => void;
 }) {
   const [appear] = useState(() => new Animated.Value(0));
   const [line] = useState(() => new Animated.Value(0));
@@ -46,7 +49,8 @@ export function Celebration({
           <Text style={styles.subtitle}>{subtitle}</Text>
         </Animated.View>
         <View style={styles.action}>
-          <Button title="Continuer" onPress={onClose} />
+          {onShare && <Button title="Partager" icon="share-outline" onPress={onShare} />}
+          <Button title="Continuer" variant={onShare ? 'ghost' : 'primary'} onPress={onClose} />
         </View>
       </View>
     </Modal>
@@ -61,5 +65,5 @@ const styles = StyleSheet.create({
   unit: { color: colors.textMuted, ...font.heading, marginTop: -spacing.sm },
   line: { height: 4, backgroundColor: colors.primary, marginVertical: spacing.lg, transformOrigin: 'left' },
   subtitle: { color: colors.text, ...font.body, fontSize: 17, lineHeight: 24 },
-  action: { position: 'absolute', left: spacing.lg, right: spacing.lg, bottom: spacing.xl * 1.5 },
+  action: { position: 'absolute', left: spacing.lg, right: spacing.lg, bottom: spacing.xl * 1.5, gap: spacing.sm },
 });

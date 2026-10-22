@@ -50,6 +50,7 @@ function RootNavigator() {
         <Stack.Screen name="team/new" options={{ title: 'Équipe', presentation: 'modal' }} />
         <Stack.Screen name="player/[id]" options={{ title: 'Joueur', presentation: 'modal' }} />
         <Stack.Screen name="add/[code]" options={{ title: 'Invitation', presentation: 'modal' }} />
+        <Stack.Screen name="share" options={{ title: 'Partager', presentation: 'modal' }} />
         <Stack.Screen name="join/[code]" options={{ title: 'Invitation', presentation: 'modal' }} />
       </Stack.Protected>
       <Stack.Protected guard={!settings.onboarded}>
