@@ -105,34 +105,43 @@ test('guerre d’équipes : créer, rejoindre, classement, quitter', async () =>
   assert.deepEqual(after.teamMembers, []);
 });
 
-test('carte : zones conquises et amis visibles', async () => {
-  // Alice est toujours dans « Les Fusées » (test précédent).
-  const hour = new Date(Math.floor(Date.now() / 3_600_000) * 3_600_000).toISOString();
-  await api.recordCellSteps(alice, [{ q: 3, r: -2, hour, steps: 640 }]);
-  const cells = await api.fetchTerritory(alice, new Date(Date.now() - 86_400_000).toISOString(), new Date(Date.now() + 3_600_000).toISOString(), {
-    minQ: 0,
-    maxQ: 10,
-    minR: -5,
-    maxR: 5,
-  });
-  assert.deepEqual(cells, [{ key: '3:-2', leader: null, myTeamSteps: 640 }], 'pas récents : visibles pour son équipe seulement');
-  await assert.rejects(
-    api.fetchTerritory(alice, hour, hour, { minQ: 0, maxQ: 500, minR: 0, maxR: 1 }),
-    { message: /Zoome/ },
-  );
-
+test('carte : visibilité, réciprocité, fiches, blocage', async () => {
   const aliceCode = (await api.fetchSnapshot(alice, ALICE, today)).profile.friend_code;
   await api.addFriend(bob, aliceCode);
+
+  // Alice visible par ses amis : Bob la voit même en mode fantôme, position exacte.
   await api.updateMyLocation(alice, { q: 3, r: -2 });
-  assert.deepEqual(await api.fetchFriendsOnMap(bob), [], 'mode fantôme par défaut');
-  await api.setLocationSharing(alice, true);
+  assert.deepEqual(await api.fetchPlayersOnMap(bob, today), [], 'fantôme par défaut');
+  await api.setMapVisibility(alice, 'friends');
   await api.updateMyLocation(alice, { q: 3, r: -2 });
-  const seen = await api.fetchFriendsOnMap(bob);
-  assert.equal(seen.length, 1);
-  assert.deepEqual({ id: seen[0].id, cell: seen[0].cell }, { id: ALICE, cell: { q: 3, r: -2 } });
-  assert.ok(seen[0].minutesAgo <= 1);
-  await api.setLocationSharing(alice, false);
-  assert.deepEqual(await api.fetchFriendsOnMap(bob), []);
+  const seen = await api.fetchPlayersOnMap(bob, today);
+  assert.deepEqual(
+    seen.map((p) => [p.name, p.isFriend, p.cell.q, p.cell.r]),
+    [['Alice', true, 3, -2]],
+  );
+
+  // Chloé, inconnue publique : Bob ne la voit qu'en devenant public lui-même.
+  await api.setMapVisibility(chloe, 'public');
+  await api.updateMyLocation(chloe, { q: 5, r: -1 });
+  assert.equal((await api.fetchPlayersOnMap(bob, today)).length, 1, 'réciprocité');
+  await api.setMapVisibility(bob, 'public');
+  await api.updateMyLocation(bob, { q: 3, r: -2 });
+  const nearby = await api.fetchPlayersOnMap(bob, today);
+  const stranger = nearby.find((p) => p.id === CHLOE);
+  assert.deepEqual(stranger && [stranger.isFriend, stranger.cell], [false, { q: 4, r: -2 }], 'position arrondie');
+
+  const card = await api.fetchPlayerCard(bob, CHLOE, today);
+  assert.equal(card.isFriend, false);
+  assert.ok(card.weekRank >= 1 && card.weekPlayers >= card.weekRank);
+  await assert.rejects(api.fetchPlayerCard(alice, CHLOE, today), { message: /plus visible/ });
+  assert.equal((await api.fetchPlayerCard(bob, ALICE, today)).isFriend, true);
+
+  await api.reportPlayer(chloe, BOB);
+  await api.blockPlayer(bob, CHLOE);
+  assert.equal((await api.fetchPlayersOnMap(bob, today)).some((p) => p.id === CHLOE), false, 'bloquée');
+
+  await api.setMapVisibility(alice, 'ghost');
+  assert.equal((await api.fetchPlayersOnMap(bob, today)).some((p) => p.id === ALICE), false, 'fantôme');
 });
 
 test('suppression de compte', async () => {

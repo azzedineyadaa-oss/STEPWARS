@@ -48,6 +48,7 @@ function RootNavigator() {
         <Stack.Screen name="challenge/new" options={{ title: 'Nouveau duel', presentation: 'modal' }} />
         <Stack.Screen name="challenge/[id]" options={{ title: 'Duel' }} />
         <Stack.Screen name="team/new" options={{ title: 'Guerre d’équipes', presentation: 'modal' }} />
+        <Stack.Screen name="player/[id]" options={{ title: 'Joueur', presentation: 'modal' }} />
       </Stack.Protected>
       <Stack.Protected guard={!settings.onboarded}>
         <Stack.Screen name="onboarding" options={{ headerShown: false }} />

@@ -3,13 +3,13 @@ import assert from 'node:assert/strict';
 
 import {
   challengeFromRow,
-  friendOnMapFromRow,
   friendlyError,
   groupSteps,
   pendingUploads,
   teamMemberFromRow,
   teamStandingFromRow,
-  territoryCellFromRow,
+  mapPlayerFromRow,
+  playerCardFromRow,
 } from '../src/lib/remote.ts';
 
 const row = {
@@ -75,19 +75,19 @@ test('équipes : conversion des lignes', () => {
   assert.equal(friendlyError('team_full'), 'Cette équipe est complète (30 membres).');
 });
 
-test('carte : conversion des zones et des amis', () => {
+test('carte : conversion des joueurs et des fiches', () => {
   assert.deepEqual(
-    territoryCellFromRow({ cell_q: 3, cell_r: -2, leader_id: 't', leader_name: 'A', leader_emoji: '🚀', leader_steps: '500', my_team_steps: '0' }),
-    { key: '3:-2', leader: { id: 't', name: 'A', emoji: '🚀', steps: 500 }, myTeamSteps: 0 },
+    mapPlayerFromRow({
+      id: 'u', name: 'Lina', avatar: '🦊', team_name: null, team_emoji: null, steps_today: 8400,
+      goal_reached: true, is_friend: true, cell_q: 1, cell_r: 2, minutes_ago: 7,
+    }),
+    { id: 'u', name: 'Lina', avatar: '🦊', teamName: null, teamEmoji: null, stepsToday: 8400, goalReached: true, isFriend: true, cell: { q: 1, r: 2 }, minutesAgo: 7 },
   );
-  assert.deepEqual(
-    territoryCellFromRow({ cell_q: 0, cell_r: 0, leader_id: null, leader_name: null, leader_emoji: null, leader_steps: null, my_team_steps: 42 }),
-    { key: '0:0', leader: null, myTeamSteps: 42 },
-  );
-  const f = friendOnMapFromRow(
-    { id: 'u', name: 'Lina', avatar: '🦊', cell_q: 1, cell_r: 2, updated_at: '2026-10-21T18:00:00Z' },
-    Date.parse('2026-10-21T18:07:10Z'),
-  );
-  assert.deepEqual(f, { id: 'u', name: 'Lina', avatar: '🦊', cell: { q: 1, r: 2 }, minutesAgo: 7 });
-  assert.equal(friendlyError('area_too_large'), 'Zoome un peu plus pour voir les territoires.');
+  const card = playerCardFromRow({
+    id: 'u', name: 'Lina', avatar: '🦊', team_name: 'A', team_emoji: '🚀', is_friend: false, steps_today: 1, steps_week: 2,
+    best_day: 3, streak: 4, week_rank: 5, week_players: 6, duels_won: 7, duels_lost: 8, duels_tied: 9,
+  });
+  assert.equal(card.teamName, 'A');
+  assert.equal(card.duelsTied, 9);
+  assert.equal(friendlyError('player_not_visible'), 'Ce joueur n’est plus visible.');
 });

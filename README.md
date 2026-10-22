@@ -11,7 +11,7 @@ Construite avec **Expo SDK 57 / React Native**. Un seul code TypeScript pour l'A
 | **Premier lancement** | Présentation, pseudo et avatar, objectif quotidien, activation des rappels |
 | **Accueil** | Pas du jour dans un anneau en dégradé, série 🔥 et record, distance, position de ton équipe dans la guerre, duel en cours, 7 derniers jours. Une célébration (confettis et vibration) quand l'objectif est atteint |
 | **Guerre** | Guerre d'équipes hebdomadaire (lundi-dimanche) : classement de toutes les équipes, compte à rebours, écart à combler pour dépasser l'équipe de devant, contribution de chaque membre, recrutement par code, signalement des noms offensants |
-| **Carte** | Conquête de territoire : la ville est découpée en hexagones d'environ 200 m, tes pas conquièrent la zone où tu marches pour ton équipe, et la carte montre la couleur de l'équipe qui tient chaque zone cette semaine. Tes amis peuvent y apparaître s'ils le choisissent (position approximative, mode fantôme par défaut) |
+| **Carte** | Les marcheurs autour de toi en bulles (avatar, pseudo, pas du jour, 🔥 objectif atteint, 👑 n°1 du jour) et le classement des « marcheurs du quartier ». Chacun choisit d'être 👻 fantôme (par défaut), visible par 👥 ses amis ou par 🌍 tout le monde. Toucher une bulle ouvre la fiche du joueur : pas du jour et de la semaine, série, record, rang et top %, bilan de duels et % de victoires, bouton « Défier », signaler et bloquer |
 | **Duels** | Duels de 1, 3 ou 7 jours contre un ami, classement des amis sur 1, 7 ou 30 jours |
 | **Profil** | Pseudo, avatar, objectif, heure du rappel du soir, code ami, amis, suppression du compte |
 
@@ -76,11 +76,11 @@ src/
   lib/reminders.ts     # rappel quotidien (notification locale)
   lib/game.ts          # logique de jeu pure (duels, séries, guerre d'équipes), testée
   lib/hex.ts           # grille d'hexagones de la carte, testée
-  lib/territory.ts     # règles de conquête (pas par zone, anti-triche, propriétaire), testées
+  lib/players.ts       # joueurs sur la carte, fiches, % de victoires, démo, testés
   lib/remote.ts        # conversion des données serveur, testée
   lib/api.ts           # appels Supabase
   state/AppStore.tsx   # état global, cache local et synchronisation
-  state/MapStore.tsx   # position, zones parcourues et partage avec les amis
+  state/MapStore.tsx   # position, visibilité sur la carte, joueurs et fiches
 supabase/migrations/   # schéma de la base et règles de sécurité
 supabase/tests/        # tests du schéma
 tests/                 # tests (node --test)

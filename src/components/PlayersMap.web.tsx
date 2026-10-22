@@ -1,20 +1,20 @@
 import { forwardRef } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-import type { TerritoryMapHandle } from '@/components/TerritoryMap';
+import type { PlayersMapHandle } from '@/components/PlayersMap';
 import { colors, font, spacing } from '@/theme';
 
 // react-native-maps n'existe pas sur le web : l'aperçu web montre un message à la place.
-export type { MapCell, MapFriend, TerritoryMapHandle } from '@/components/TerritoryMap';
+export type { MapBubble, PlayersMapHandle } from '@/components/PlayersMap';
 
-export const TerritoryMap = forwardRef<TerritoryMapHandle, object>(function TerritoryMap() {
+export const PlayersMap = forwardRef<PlayersMapHandle, object>(function PlayersMap() {
   return (
     <View style={[StyleSheet.absoluteFill, styles.box]}>
       <Text style={styles.icon}>🗺️</Text>
       <Text style={styles.title}>La carte s’ouvre sur téléphone</Text>
       <Text style={styles.text}>
-        Sur l’app, la ville est découpée en zones : marche dans une zone pour la conquérir avec ton équipe, et
-        retrouve tes amis sur la carte.
+        Sur l’app, retrouve les marcheurs autour de toi avec leurs pas du jour, et touche une bulle pour voir la fiche
+        du joueur.
       </Text>
     </View>
   );

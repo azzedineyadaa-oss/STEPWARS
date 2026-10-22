@@ -90,7 +90,7 @@ Résultat : un fichier `.ipa` (iOS) et un fichier `.aab` (Android).
 3. **TestFlight** : le build y apparaît après 10 à 30 minutes de traitement. Ajoutez des testeurs internes (jusqu'à 100) ou externes (jusqu'à 10 000, après une courte revue).
 4. Remplissez la fiche de l'app :
    - description, mots-clés, captures d'écran, URL de support, URL de confidentialité ;
-   - **Confidentialité de l'app** : déclarez « Forme physique » (nombre de pas), « Localisation approximative » (la zone d'environ 200 m envoyée pour la carte, jamais la position précise) et « Identifiants : identifiant utilisateur » (le compte anonyme), **liés à l'utilisateur**, utilisés pour les « fonctionnalités de l'app » et non pour le pistage ;
+   - **Confidentialité de l'app** : déclarez « Forme physique » (nombre de pas), « Localisation approximative » (la zone d'environ 200 m envoyée pour la carte, seulement si le joueur choisit d'être visible, jamais la position précise) et « Identifiants : identifiant utilisateur » (le compte anonyme), **liés à l'utilisateur**, utilisés pour les « fonctionnalités de l'app » et non pour le pistage ;
    - classification par âge : questionnaire, normalement 4+ ;
    - chiffrement : déjà déclaré dans `app.json` (`ITSAppUsesNonExemptEncryption: false`).
 5. Cliquez sur **Soumettre pour vérification**. La revue prend en général de 24 à 48 h.
@@ -98,7 +98,8 @@ Résultat : un fichier `.ipa` (iOS) et un fichier `.aab` (Android).
 **Rejets fréquents à éviter :**
 - Soumettez un build **connecté à Supabase** (voir `docs/BACKEND.md`) : en mode démo, les amis simulés risquent un refus.
 - Dans les notes de revue, expliquez comment tester sans second téléphone : donnez le code ami d'un compte de test que vous gardez actif.
-- Les noms d'équipe sont du **contenu créé par les joueurs** et visible de tous : Apple exige un moyen de les signaler (règle 1.2). C'est en place (appui long sur une équipe dans le classement) ; indiquez-le dans les notes de revue.
+- Les noms d'équipe et les pseudos sur la carte sont du **contenu créé par les joueurs** et visible de tous : Apple exige de pouvoir les signaler et bloquer un joueur (règle 1.2). C'est en place (appui long sur une équipe dans le classement ; boutons Signaler et Bloquer sur chaque fiche joueur) ; indiquez-le dans les notes de revue.
+- La carte publique montre des inconnus proches : elle est réservée aux 16 ans et plus (confirmation avant de passer en « Tout le monde »). Choisissez une classification par âge cohérente (12+ ou plus sur l'App Store, « Interactions entre utilisateurs » et « Partage de position » déclarés sur le Play Store).
 - La **suppression de compte** exigée par Apple est déjà en place, dans l'onglet Profil, puis « Supprimer mon compte ».
 
 ---

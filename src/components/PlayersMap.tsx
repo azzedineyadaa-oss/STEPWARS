@@ -1,25 +1,30 @@
 import { forwardRef, useImperativeHandle, useRef } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import MapView, { Marker, Polygon } from 'react-native-maps';
+import MapView, { Marker } from 'react-native-maps';
 
 import type { LatLng } from '@/lib/hex';
 import type { Region } from '@/state/MapStore';
-import { colors, radius } from '@/theme';
+import { colors, formatCompact, radius } from '@/theme';
 
-export type MapCell = { key: string; boundary: LatLng[]; color: string; selected: boolean };
-export type MapFriend = { id: string; name: string; avatar: string; coordinate: LatLng; minutesAgo: number };
+export type MapBubble = {
+  id: string;
+  name: string;
+  avatar: string;
+  stepsToday: number;
+  coordinate: LatLng;
+  isFriend: boolean;
+  goalReached: boolean;
+  isLeader: boolean;
+};
 
-export type TerritoryMapHandle = { recenter: (region: Region) => void };
+export type PlayersMapHandle = { recenter: (region: Region) => void };
 
 type Props = {
   initialRegion: Region;
-  cells: MapCell[];
-  /** Contour de la zone touchée, même si personne ne la tient. */
-  selection: LatLng[] | null;
-  friends: MapFriend[];
+  players: MapBubble[];
   showsUserLocation: boolean;
   onRegionChangeComplete: (region: Region) => void;
-  onPress: (coordinate: LatLng) => void;
+  onPlayerPress: (id: string) => void;
 };
 
 // Style sombre pour Google Maps (Android) ; sur iPhone, Apple Plans suit `userInterfaceStyle`.
@@ -33,8 +38,8 @@ const DARK_STYLE = [
   { featureType: 'transit', stylers: [{ visibility: 'off' }] },
 ];
 
-export const TerritoryMap = forwardRef<TerritoryMapHandle, Props>(function TerritoryMap(
-  { initialRegion, cells, selection, friends, showsUserLocation, onRegionChangeComplete, onPress },
+export const PlayersMap = forwardRef<PlayersMapHandle, Props>(function PlayersMap(
+  { initialRegion, players, showsUserLocation, onRegionChangeComplete, onPlayerPress },
   ref,
 ) {
   const map = useRef<MapView>(null);
@@ -53,27 +58,26 @@ export const TerritoryMap = forwardRef<TerritoryMapHandle, Props>(function Terri
       toolbarEnabled={false}
       pitchEnabled={false}
       onRegionChangeComplete={onRegionChangeComplete}
-      onPress={(e) => onPress(e.nativeEvent.coordinate)}
     >
-      {cells.map((c) => (
-        <Polygon
-          key={c.key}
-          coordinates={c.boundary}
-          fillColor={`${c.color}55`}
-          strokeColor={c.selected ? '#FFFFFF' : `${c.color}CC`}
-          strokeWidth={c.selected ? 3 : 1}
-        />
-      ))}
-      {selection && !cells.some((c) => c.selected) && (
-        <Polygon coordinates={selection} fillColor="#FFFFFF22" strokeColor="#FFFFFF" strokeWidth={2} />
-      )}
-      {friends.map((f) => (
-        <Marker key={f.id} coordinate={f.coordinate} anchor={{ x: 0.5, y: 0.5 }} tracksViewChanges={false}>
-          <View style={styles.friend}>
-            <Text style={styles.friendAvatar}>{f.avatar}</Text>
+      {players.map((p) => (
+        <Marker
+          // La clé change avec le contenu : la bulle est redessinée quand les pas changent.
+          key={`${p.id}-${p.stepsToday}-${p.isLeader}`}
+          coordinate={p.coordinate}
+          anchor={{ x: 0.5, y: 0.5 }}
+          tracksViewChanges={false}
+          onPress={() => onPlayerPress(p.id)}
+        >
+          <View style={[styles.bubble, p.isFriend ? styles.friend : styles.stranger, p.isLeader && styles.leader]}>
+            <Text style={styles.avatar}>{p.avatar}</Text>
             <View>
-              <Text style={styles.friendName}>{f.name}</Text>
-              <Text style={styles.friendTime}>{f.minutesAgo <= 1 ? 'à l’instant' : `il y a ${f.minutesAgo} min`}</Text>
+              <Text style={styles.name} numberOfLines={1}>
+                {p.isLeader ? '👑 ' : ''}
+                {p.name}
+              </Text>
+              <Text style={styles.steps}>
+                {formatCompact(p.stepsToday)} pas{p.goalReached ? ' 🔥' : ''}
+              </Text>
             </View>
           </View>
         </Marker>
@@ -83,19 +87,22 @@ export const TerritoryMap = forwardRef<TerritoryMapHandle, Props>(function Terri
 });
 
 const styles = StyleSheet.create({
-  friend: {
+  bubble: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
     backgroundColor: colors.surface,
-    borderColor: colors.secondary,
     borderWidth: 2,
     borderRadius: radius.pill,
     paddingVertical: 4,
     paddingLeft: 4,
     paddingRight: 10,
+    maxWidth: 170,
   },
-  friendAvatar: { fontSize: 22 },
-  friendName: { color: colors.text, fontWeight: '800', fontSize: 13 },
-  friendTime: { color: colors.textMuted, fontSize: 10, fontWeight: '600' },
+  friend: { borderColor: colors.secondary },
+  stranger: { borderColor: colors.border },
+  leader: { borderColor: colors.gold },
+  avatar: { fontSize: 22 },
+  name: { color: colors.text, fontWeight: '800', fontSize: 13 },
+  steps: { color: colors.textMuted, fontSize: 11, fontWeight: '700' },
 });

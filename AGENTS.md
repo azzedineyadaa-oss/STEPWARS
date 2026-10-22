@@ -44,9 +44,9 @@ Docs: https://docs.expo.dev/eas/index.md
 
 - Game logic lives in `src/lib/game.ts` and has no imports, so it runs under `node --test`. Keep it free of React Native imports and run `npm test` after changing it.
 - `docs.expo.dev` and the Expo API may be unreachable in sandboxed environments; `npx expo install` then fails. Take SDK-compatible versions from `node_modules/expo/bundledNativeModules.json` and install them with npm.
-- `src/lib/remote.ts`, `src/lib/hex.ts` and `src/lib/territory.ts` follow the same rule: only relative `./*.ts` imports between these pure modules.
-- Map privacy is a product rule, enforced in `supabase/migrations/20261023000000_map.sql` and tested in `supabase/tests/territory_test.sql`: only hex cells leave the phone, other teams' territory is delayed by an hour, friend locations are opt-in, friends-only and expire after 30 minutes. Do not weaken these without the owner's explicit decision.
-- `react-native-maps` has no web build: map UI goes through `src/components/TerritoryMap.tsx` with its `.web.tsx` fallback.
+- `src/lib/remote.ts`, `src/lib/hex.ts` and `src/lib/players.ts` follow the same rule: only relative `./*.ts` imports between these pure modules.
+- Map privacy is a product rule, enforced in `supabase/migrations/20261024000000_players_map.sql` and tested in `supabase/tests/visibility_test.sql`: visibility is opt-in (ghost by default), only hex cells leave the phone, strangers see each other only when both are public, within ~2 km, rounded to ~600 m, with block and report. Do not weaken these without the owner's explicit decision.
+- `react-native-maps` has no web build: map UI goes through `src/components/PlayersMap.tsx` with its `.web.tsx` fallback.
 - The backend is Supabase (`docs/BACKEND.md`). Any schema change goes in a new file under `supabase/migrations/` and must keep `npm run test:db` and `npm run test:api` (end-to-end test of `src/lib/api.ts` through PostgREST) passing; add scenarios to `supabase/tests/*_test.sql` (shared helpers in `helpers.sql`) for new rules.
 - Without `EXPO_PUBLIC_SUPABASE_URL`/`EXPO_PUBLIC_SUPABASE_KEY` the app runs in demo mode; keep both modes working.
 - The app talks to the player with « tu » (the team is « vous »). Keep new copy consistent.

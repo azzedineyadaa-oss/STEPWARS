@@ -4,41 +4,21 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { Platform } from 'react-native';
 
 import * as api from '@/lib/api';
-import { DEMO_RIVALS, fromDayKey, toDayKey, weekStart } from '@/lib/game';
-import { boundsForRegion, cellAt, cellKey, type LatLng } from '@/lib/hex';
+import { cellAt, cellKey, type LatLng } from '@/lib/hex';
+import { demoPlayerCard, demoPlayersAround, type MapPlayer, type MapVisibility, type PlayerCard } from '@/lib/players';
 import { supabase } from '@/lib/supabase';
-import {
-  addCellSteps,
-  attributeSample,
-  demoFriendsOnMap,
-  demoTerritory,
-  hourBucket,
-  myStepsByCell,
-  pendingCellUploads,
-  pruneCellSteps,
-  type CellSteps,
-  type FriendOnMap,
-  type Sample,
-  type TerritoryCell,
-} from '@/lib/territory';
 import { useAppStore } from '@/state/AppStore';
 
-const STORAGE_KEY = 'stepwars:map:v1';
-const UPLOAD_DELAY_MS = 15_000;
+const STORAGE_KEY = 'stepwars:map:v2';
 const LOCATION_SHARE_INTERVAL_MS = 5 * 60_000;
-/** Au-delà, la carte couvre trop de zones : on demande de zoomer. */
-const MAX_BOUNDS_SPAN = 60;
 
 export type Region = { latitude: number; longitude: number; latitudeDelta: number; longitudeDelta: number };
 
 export type LocationState = 'unknown' | 'granted' | 'denied' | 'unavailable';
 
 type PersistedMap = {
-  /** Mes pas par zone et par heure, et ce qui a déjà été envoyé. */
-  cellSteps: CellSteps;
-  uploadedCells: CellSteps;
-  /** Ma zone visible par mes amis (désactivé par défaut). */
-  shareLocation: boolean;
+  /** Qui me voit sur la carte. Fantôme par défaut. */
+  visibility: MapVisibility;
   lastPosition: LatLng | null;
   accountId: string | null;
 };
@@ -46,47 +26,37 @@ type PersistedMap = {
 type MapStore = PersistedMap & {
   location: LocationState;
   position: LatLng | null;
+  /** Derniers joueurs chargés pour la carte. */
+  players: MapPlayer[];
   enableLocation: () => Promise<boolean>;
-  setShareLocation: (enabled: boolean) => Promise<void>;
-  /** Territoire de la guerre en cours dans la zone affichée (null : trop dézoomé). */
-  loadTerritory: (region: Region) => Promise<TerritoryCell[] | null>;
-  loadFriendsOnMap: (region: Region) => Promise<FriendOnMap[]>;
+  setVisibility: (mode: MapVisibility) => Promise<void>;
+  /** Joueurs visibles : mes amis, et les joueurs proches si je suis public. */
+  loadPlayers: (center: LatLng) => Promise<MapPlayer[]>;
+  /** `known` : ce que la carte sait déjà du joueur (sert au mode démo). */
+  loadPlayerCard: (playerId: string, known?: MapPlayer) => Promise<PlayerCard>;
+  blockPlayer: (playerId: string) => Promise<void>;
+  reportPlayer: (playerId: string) => Promise<void>;
 };
 
-const initialMap = (): PersistedMap => ({
-  cellSteps: {},
-  uploadedCells: {},
-  shareLocation: false,
+const initialMap = (accountId: string | null = null): PersistedMap => ({
+  visibility: 'ghost',
   lastPosition: null,
-  accountId: null,
+  accountId,
 });
-
-/** Début et fin (ISO) de la guerre de la semaine, en heure locale. */
-function warWindow(): { from: string; to: string; key: string } {
-  const start = fromDayKey(weekStart(toDayKey(new Date())));
-  const end = new Date(start);
-  end.setDate(end.getDate() + 7);
-  return { from: start.toISOString(), to: end.toISOString(), key: weekStart(toDayKey(new Date())) };
-}
 
 const MapStoreContext = createContext<MapStore | null>(null);
 
 export function MapStoreProvider({ children }: { children: ReactNode }) {
-  const app = useAppStore();
-  const { mode, myId, accountId, team, friends, todaySteps, settings, ready: appReady } = app;
+  const { mode, myId, accountId, friends, today, settings, ready: appReady, refresh } = useAppStore();
   const online = mode === 'online' && supabase !== null && accountId !== null && myId === accountId;
 
   const [state, setState] = useState<PersistedMap>(initialMap);
   const [ready, setReady] = useState(false);
   const [location, setLocation] = useState<LocationState>(Platform.OS === 'web' ? 'unavailable' : 'unknown');
   const [position, setPosition] = useState<LatLng | null>(null);
-
-  const stateRef = useRef(state);
-  const stepsRef = useRef(todaySteps);
-  useEffect(() => {
-    stateRef.current = state;
-    stepsRef.current = todaySteps;
-  });
+  const [players, setPlayers] = useState<MapPlayer[]>([]);
+  // Joueurs bloqués en mode démo (en ligne, c'est le serveur qui filtre).
+  const [demoBlocked, setDemoBlocked] = useState<string[]>([]);
 
   useEffect(() => {
     AsyncStorage.getItem(STORAGE_KEY)
@@ -99,9 +69,9 @@ export function MapStoreProvider({ children }: { children: ReactNode }) {
     if (ready) AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(state)).catch(() => {});
   }, [state, ready]);
 
-  // Nouveau compte (ou compte supprimé) : on repart de zéro. Fait pendant le
-  // rendu, comme React le recommande pour un état qui dépend d'une autre valeur.
-  if (ready && appReady && state.accountId !== accountId) setState({ ...initialMap(), accountId });
+  // Nouveau compte (ou compte supprimé) : retour en mode fantôme. Fait pendant
+  // le rendu, comme React le recommande pour un état qui dépend d'une autre valeur.
+  if (ready && appReady && state.accountId !== accountId) setState(initialMap(accountId));
 
   // Autorisation déjà accordée lors d'une session précédente ?
   useEffect(() => {
@@ -118,42 +88,31 @@ export function MapStoreProvider({ children }: { children: ReactNode }) {
     return p.granted;
   }, []);
 
-  // --- Suivi de la position, app ouverte seulement ------------------------------
-  const lastSample = useRef<Sample | null>(null);
+  // --- Position, app ouverte seulement ------------------------------------------
   const lastShared = useRef<{ key: string; time: number } | null>(null);
-  const shareRef = useRef({ online, share: state.shareLocation });
+  const shareRef = useRef({ online, visibility: state.visibility });
   useEffect(() => {
-    shareRef.current = { online, share: state.shareLocation };
+    shareRef.current = { online, visibility: state.visibility };
   });
 
   useEffect(() => {
     if (location !== 'granted' || !settings.onboarded) return;
     let sub: Location.LocationSubscription | null = null;
     let cancelled = false;
-    Location.watchPositionAsync(
-      { accuracy: Location.Accuracy.Balanced, distanceInterval: 20, timeInterval: 15_000 },
-      (loc) => {
-        const here = { latitude: loc.coords.latitude, longitude: loc.coords.longitude };
-        setPosition(here);
-        const sample: Sample = { position: here, time: loc.timestamp, steps: stepsRef.current };
-        const credited = attributeSample(lastSample.current, sample);
-        lastSample.current = sample;
-        setState((s) => ({
-          ...s,
-          lastPosition: here,
-          cellSteps: credited ? addCellSteps(s.cellSteps, credited.key, hourBucket(sample.time), credited.steps) : s.cellSteps,
-        }));
+    Location.watchPositionAsync({ accuracy: Location.Accuracy.Balanced, distanceInterval: 30, timeInterval: 20_000 }, (loc) => {
+      const here = { latitude: loc.coords.latitude, longitude: loc.coords.longitude };
+      setPosition(here);
+      setState((s) => ({ ...s, lastPosition: here }));
 
-        // Zone partagée avec les amis : à chaque changement de zone, sinon toutes les 5 minutes.
-        const key = cellKey(cellAt(here));
-        const { online: isOnline, share } = shareRef.current;
-        const prev = lastShared.current;
-        if (supabase && isOnline && share && (!prev || prev.key !== key || Date.now() - prev.time > LOCATION_SHARE_INTERVAL_MS)) {
-          lastShared.current = { key, time: Date.now() };
-          api.updateMyLocation(supabase, cellAt(here)).catch(() => {});
-        }
-      },
-    )
+      // Seule la zone (≈ 200 m) part au serveur : à chaque changement de zone, sinon toutes les 5 minutes.
+      const { online: isOnline, visibility } = shareRef.current;
+      const key = cellKey(cellAt(here));
+      const prev = lastShared.current;
+      if (supabase && isOnline && visibility !== 'ghost' && (!prev || prev.key !== key || Date.now() - prev.time > LOCATION_SHARE_INTERVAL_MS)) {
+        lastShared.current = { key, time: Date.now() };
+        api.updateMyLocation(supabase, cellAt(here)).catch(() => {});
+      }
+    })
       .then((s) => (cancelled ? s.remove() : (sub = s)))
       .catch(() => setLocation('unavailable'));
     return () => {
@@ -162,77 +121,85 @@ export function MapStoreProvider({ children }: { children: ReactNode }) {
     };
   }, [location, settings.onboarded]);
 
-  // --- Envoi des zones parcourues --------------------------------------------
-  const uploadTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-  useEffect(() => {
-    if (!online || !supabase || uploadTimer.current) return;
-    if (pendingCellUploads(state.cellSteps, state.uploadedCells).length === 0) return;
-    const db = supabase;
-    uploadTimer.current = setTimeout(async () => {
-      const s = stateRef.current;
-      const cellSteps = pruneCellSteps(s.cellSteps, Date.now());
-      const entries = pendingCellUploads(cellSteps, s.uploadedCells);
-      try {
-        await api.recordCellSteps(db, entries);
-        setState((cur) => {
-          let uploadedCells = pruneCellSteps(cur.uploadedCells, Date.now());
-          for (const e of entries) {
-            const key = cellKey(e);
-            uploadedCells = { ...uploadedCells, [key]: { ...uploadedCells[key], [e.hour]: e.steps } };
-          }
-          return { ...cur, cellSteps: pruneCellSteps(cur.cellSteps, Date.now()), uploadedCells };
-        });
-      } catch {
-        // Réessayé au prochain pas.
-      } finally {
-        uploadTimer.current = undefined;
-      }
-    }, UPLOAD_DELAY_MS);
-  }, [online, state.cellSteps, state.uploadedCells]);
-
-  useEffect(() => () => clearTimeout(uploadTimer.current), []);
-
   // --- Actions --------------------------------------------------------------------
 
-  const setShareLocation = useCallback(
-    async (enabled: boolean) => {
+  const setVisibility = useCallback(
+    async (mode: MapVisibility) => {
       if (online && supabase) {
-        await api.setLocationSharing(supabase, enabled);
+        await api.setMapVisibility(supabase, mode);
         lastShared.current = null;
-        const here = stateRef.current.lastPosition;
-        if (enabled && here) {
+        const here = state.lastPosition;
+        if (mode !== 'ghost' && here) {
           lastShared.current = { key: cellKey(cellAt(here)), time: Date.now() };
           await api.updateMyLocation(supabase, cellAt(here));
         }
       }
-      setState((s) => ({ ...s, shareLocation: enabled }));
+      setState((s) => ({ ...s, visibility: mode }));
+    },
+    [online, state.lastPosition],
+  );
+
+  const loadPlayers = useCallback(
+    async (center: LatLng) => {
+      let loaded: MapPlayer[];
+      if (online && supabase) {
+        loaded = await api.fetchPlayersOnMap(supabase, today);
+      } else {
+        const now = new Date();
+        const dayProgress = (now.getHours() * 60 + now.getMinutes()) / (24 * 60);
+        const hourSeed = `${today}T${now.getHours()}`;
+        loaded = demoPlayersAround(cellAt(center), friends, state.visibility, today, dayProgress, hourSeed).filter(
+          (p) => !demoBlocked.includes(p.id),
+        );
+      }
+      setPlayers(loaded);
+      return loaded;
+    },
+    [online, today, friends, state.visibility, demoBlocked],
+  );
+
+  const loadPlayerCard = useCallback(
+    async (playerId: string, known?: MapPlayer) => {
+      if (online && supabase) return api.fetchPlayerCard(supabase, playerId, today);
+      if (!known) throw new api.ApiError('Ce joueur n’est plus visible.');
+      return demoPlayerCard(known);
+    },
+    [online, today],
+  );
+
+  const blockPlayer = useCallback(
+    async (playerId: string) => {
+      if (online && supabase) {
+        await api.blockPlayer(supabase, playerId);
+        await refresh();
+      } else {
+        setDemoBlocked((b) => [...b, playerId]);
+      }
+    },
+    [online, refresh],
+  );
+
+  const reportPlayer = useCallback(
+    async (playerId: string) => {
+      if (online && supabase) await api.reportPlayer(supabase, playerId);
     },
     [online],
   );
 
-  const loadTerritory = useCallback(
-    async (region: Region) => {
-      const bounds = boundsForRegion(region);
-      if (bounds.maxQ - bounds.minQ > MAX_BOUNDS_SPAN || bounds.maxR - bounds.minR > MAX_BOUNDS_SPAN) return null;
-      const war = warWindow();
-      if (online && supabase) return api.fetchTerritory(supabase, war.from, war.to, bounds);
-      const mine = myStepsByCell(stateRef.current.cellSteps, war.from);
-      return demoTerritory(cellAt(region), war.key, DEMO_RIVALS, team, mine, 8);
-    },
-    [online, team],
-  );
-
-  const loadFriendsOnMap = useCallback(
-    async (region: Region) => {
-      if (online && supabase) return api.fetchFriendsOnMap(supabase);
-      return demoFriendsOnMap(cellAt(region), friends, hourBucket(Date.now()));
-    },
-    [online, friends],
-  );
-
   const value = useMemo<MapStore>(
-    () => ({ ...state, location, position, enableLocation, setShareLocation, loadTerritory, loadFriendsOnMap }),
-    [state, location, position, enableLocation, setShareLocation, loadTerritory, loadFriendsOnMap],
+    () => ({
+      ...state,
+      location,
+      position,
+      players,
+      enableLocation,
+      setVisibility,
+      loadPlayers,
+      loadPlayerCard,
+      blockPlayer,
+      reportPlayer,
+    }),
+    [state, location, position, players, enableLocation, setVisibility, loadPlayers, loadPlayerCard, blockPlayer, reportPlayer],
   );
 
   return <MapStoreContext.Provider value={value}>{children}</MapStoreContext.Provider>;

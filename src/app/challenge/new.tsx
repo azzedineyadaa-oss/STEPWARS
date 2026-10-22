@@ -1,4 +1,4 @@
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 
@@ -14,7 +14,11 @@ const DURATIONS = [
 
 export default function NewChallengeScreen() {
   const { friends, createChallenge } = useAppStore();
-  const [opponentId, setOpponentId] = useState<string | null>(friends[0]?.id ?? null);
+  // Ouvert depuis une fiche joueur : l'adversaire est déjà choisi.
+  const { opponent } = useLocalSearchParams<{ opponent?: string }>();
+  const [opponentId, setOpponentId] = useState<string | null>(
+    friends.some((f) => f.id === opponent) ? (opponent ?? null) : (friends[0]?.id ?? null),
+  );
   const [days, setDays] = useState(1);
   const [busy, setBusy] = useState(false);
 

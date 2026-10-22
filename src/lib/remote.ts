@@ -1,6 +1,6 @@
 // Conversion entre les lignes Supabase et les types de l'app. Pur, testé avec `node --test`.
 import type { Challenge, DayKey, Friend, StepHistory, Team, TeamMember, TeamStanding } from './game.ts';
-import type { FriendOnMap, TerritoryCell } from './territory.ts';
+import type { MapPlayer, PlayerCard } from './players.ts';
 
 export type ProfileRow = {
   id: string;
@@ -51,35 +51,70 @@ export function teamStandingFromRow(row: TeamStandingRow): TeamStanding {
   return { id: row.id, name: row.name, emoji: row.emoji, members: row.members, steps: Number(row.steps) };
 }
 
-export type TerritoryRow = {
+export type MapPlayerRow = {
+  id: string;
+  name: string;
+  avatar: string;
+  team_name: string | null;
+  team_emoji: string | null;
+  steps_today: number;
+  goal_reached: boolean;
+  is_friend: boolean;
   cell_q: number;
   cell_r: number;
-  leader_id: string | null;
-  leader_name: string | null;
-  leader_emoji: string | null;
-  leader_steps: number | string | null;
-  my_team_steps: number | string;
+  minutes_ago: number;
 };
 
-export function territoryCellFromRow(row: TerritoryRow): TerritoryCell {
-  return {
-    key: `${row.cell_q}:${row.cell_r}`,
-    leader: row.leader_id
-      ? { id: row.leader_id, name: row.leader_name ?? '', emoji: row.leader_emoji ?? '', steps: Number(row.leader_steps ?? 0) }
-      : null,
-    myTeamSteps: Number(row.my_team_steps),
-  };
-}
-
-export type FriendOnMapRow = { id: string; name: string; avatar: string; cell_q: number; cell_r: number; updated_at: string };
-
-export function friendOnMapFromRow(row: FriendOnMapRow, now: number): FriendOnMap {
+export function mapPlayerFromRow(row: MapPlayerRow): MapPlayer {
   return {
     id: row.id,
     name: row.name,
     avatar: row.avatar,
+    teamName: row.team_name,
+    teamEmoji: row.team_emoji,
+    stepsToday: row.steps_today,
+    goalReached: row.goal_reached,
+    isFriend: row.is_friend,
     cell: { q: row.cell_q, r: row.cell_r },
-    minutesAgo: Math.max(0, Math.round((now - Date.parse(row.updated_at)) / 60_000)),
+    minutesAgo: row.minutes_ago,
+  };
+}
+
+export type PlayerCardRow = {
+  id: string;
+  name: string;
+  avatar: string;
+  team_name: string | null;
+  team_emoji: string | null;
+  is_friend: boolean;
+  steps_today: number;
+  steps_week: number;
+  best_day: number;
+  streak: number;
+  week_rank: number;
+  week_players: number;
+  duels_won: number;
+  duels_lost: number;
+  duels_tied: number;
+};
+
+export function playerCardFromRow(row: PlayerCardRow): PlayerCard {
+  return {
+    id: row.id,
+    name: row.name,
+    avatar: row.avatar,
+    teamName: row.team_name,
+    teamEmoji: row.team_emoji,
+    isFriend: row.is_friend,
+    stepsToday: row.steps_today,
+    stepsWeek: row.steps_week,
+    bestDay: row.best_day,
+    streak: row.streak,
+    weekRank: row.week_rank,
+    weekPlayers: row.week_players,
+    duelsWon: row.duels_won,
+    duelsLost: row.duels_lost,
+    duelsTied: row.duels_tied,
   };
 }
 
@@ -117,7 +152,8 @@ export function friendlyError(message: string | undefined): string {
   if (message.includes('team_full')) return 'Cette équipe est complète (30 membres).';
   if (message.includes('cannot_report_own_team')) return 'Tu ne peux pas signaler ta propre équipe.';
   if (message.includes('teams_name_check')) return 'Le nom d’équipe doit faire entre 2 et 24 caractères.';
-  if (message.includes('area_too_large')) return 'Zoome un peu plus pour voir les territoires.';
+  if (message.includes('player_not_visible')) return 'Ce joueur n’est plus visible.';
+  if (message.includes('cannot_block_self') || message.includes('cannot_report_self')) return 'C’est toi !';
   if (message.includes('not_authenticated')) return 'Connexion au serveur perdue. Relancez l’app.';
   if (/network|fetch/i.test(message)) return 'Pas de connexion internet.';
   return 'Une erreur est survenue. Réessayez.';
