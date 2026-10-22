@@ -6,16 +6,18 @@ Construite avec **Expo SDK 57 / React Native**. Un seul code TypeScript pour l'A
 
 ## Fonctionnalités
 
+Le public visé : les gens qui font leurs 10 000 pas par jour, pour leur santé ou pendant un rééquilibrage alimentaire, et que la compétition motive.
+
 | Écran | Contenu |
 | --- | --- |
-| **Premier lancement** | Présentation, pseudo et avatar, objectif quotidien, activation des rappels |
-| **Accueil** | Pas du jour dans un anneau en dégradé, série 🔥 et record, distance, position de ton équipe dans la guerre, duel en cours, 7 derniers jours. Une célébration (confettis et vibration) quand l'objectif est atteint |
-| **Guerre** | Guerre d'équipes hebdomadaire (lundi-dimanche) : classement de toutes les équipes, compte à rebours, écart à combler pour dépasser l'équipe de devant, contribution de chaque membre, recrutement par code, signalement des noms offensants |
-| **Carte** | Les marcheurs autour de toi en bulles (avatar, pseudo, pas du jour, 🔥 objectif atteint, 👑 n°1 du jour) et le classement des « marcheurs du quartier ». Chacun choisit d'être 👻 fantôme (par défaut), visible par 👥 ses amis ou par 🌍 tout le monde. Toucher une bulle ouvre la fiche du joueur : pas du jour et de la semaine, série, record, rang et top %, bilan de duels et % de victoires, bouton « Défier », signaler et bloquer |
-| **Duels** | Duels de 1, 3 ou 7 jours contre un ami, classement des amis sur 1, 7 ou 30 jours |
-| **Profil** | Pseudo, avatar, objectif, heure du rappel du soir, code ami, amis, suppression du compte |
+| **Premier lancement** | Présentation, pseudo, objectif quotidien (10 000 par défaut), rappel du soir. « J'ai déjà un compte » retrouve un compte par e-mail |
+| **Accueil** | Anneau des pas du jour, série avec joker hebdomadaire, meilleure série, distance, bilan du lundi (« Tu montes en Route ! »), nouveau badge, ma ligue, mon équipe, invitations et duels en cours, 7 derniers jours. Écran de fête et partage quand l'objectif est atteint |
+| **Ligue** | Sous-onglet **Ligue** : chaque semaine, jusqu'à 30 joueurs de ton niveau (Sentier, Chemin, Route, Col, Sommet), zones de montée et de descente, objectif à atteindre. Sous-onglet **Équipes** : ton équipe contre toutes les autres, contribution de chaque membre, invitation par lien |
+| **Carte** | Les marcheurs autour de toi en bulles (pseudo, pas du jour). Chacun choisit d'être invisible (par défaut), visible par ses amis ou public. Fiche joueur : pas, série, rang, bilan de duels, défier, signaler, bloquer |
+| **Duels** | Invitations à accepter ou refuser, duels de 1, 3 ou 7 jours avec gage facultatif, revanche, classement des amis sur 1, 7 ou 30 jours |
+| **Profil** | Sauvegarde du compte par e-mail, badges, pseudo, objectif, rappel, invitation d'amis par lien ou QR code, amis, suppression du compte |
 
-**Ce qui fait revenir les joueurs** : la série 🔥 qu'on ne veut pas casser, l'équipe qui compte sur toi, le duel en cours, et un rappel chaque soir.
+**Ce qui fait revenir les joueurs** : la ligue de la semaine (monter, ne pas descendre), la série protégée par un joker, les duels entre amis, les badges, le bilan du lundi et le rappel du soir.
 
 Le serveur est **Supabase** : comptes anonymes, amis par code, pas partagés et défis entre amis. Mise en place dans **[docs/BACKEND.md](docs/BACKEND.md)**.
 
@@ -69,12 +71,18 @@ npm run submit:android   # envoi vers Google Play (piste interne)
 ```
 src/
   app/                 # écrans (Expo Router : un fichier = un écran)
-    (tabs)/            # les 4 onglets
-    challenge/         # création et détail d'un défi
+    (tabs)/            # les 5 onglets
+    challenge/         # création et détail d'un duel
+    account.tsx        # sauvegarde / connexion par e-mail (code à 6 chiffres)
+    add/, join/        # liens d'invitation (ami, équipe)
+    share.tsx          # image à partager (format story)
   components/          # composants d'interface
   hooks/usePedometerSync.ts   # lecture du podomètre iOS / Android
   lib/reminders.ts     # rappel quotidien (notification locale)
-  lib/game.ts          # logique de jeu pure (duels, séries, guerre d'équipes), testée
+  lib/game.ts          # logique de jeu pure (duels, séries et joker, équipes), testée
+  lib/league.ts        # ligues hebdomadaires par niveau, testées
+  lib/badges.ts        # badges, testés
+  lib/invite.ts        # liens d'invitation
   lib/hex.ts           # grille d'hexagones de la carte, testée
   lib/players.ts       # joueurs sur la carte, fiches, % de victoires, démo, testés
   lib/remote.ts        # conversion des données serveur, testée
@@ -90,9 +98,10 @@ eas.json               # profils de build et de soumission EAS
 
 ## Feuille de route
 
-1. **Connexion Apple et Google**, pour ne pas perdre son compte en changeant de téléphone.
-2. **Comptage en arrière-plan** : Apple HealthKit (iOS) et Health Connect (Android). Sans eux, Android ne compte les pas que lorsque l'app est ouverte.
-3. **Notifications envoyées par le serveur** : « ton équipe vient de passer 2ᵉ », « Lina t'a défié », résultat de la guerre le lundi matin.
-4. **Historique des guerres** : vainqueurs des semaines passées, trophées d'équipe.
+1. **Comptage en arrière-plan et anti-triche renforcé** : Apple HealthKit (iOS) et Health Connect (Android). Sans eux, Android ne compte les pas que lorsque l'app est ouverte. Nécessite un build EAS (pas Expo Go).
+2. **Notifications envoyées par le serveur** : « Lina t'a défié », « Sarah vient de te dépasser », bilan du lundi matin.
+3. **Envoi d'e-mails** par un service dédié (Resend, Brevo) : celui de Supabase est limité à quelques e-mails par heure.
+4. **Connexion Apple et Google**, en plus de l'e-mail.
+5. **Liens d'invitation https** (universal links) qui mènent au store quand l'app n'est pas installée.
 
 Les icônes de `assets/` sont générées par `scripts/make-icons.mjs`.

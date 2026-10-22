@@ -17,7 +17,7 @@ L'app utilise [Supabase](https://supabase.com) pour les comptes, les amis, les p
 | Inconnus sur la carte | Visibles seulement entre joueurs publics (**réciprocité**), à moins de 2 km de sa propre position, avec une position **arrondie à environ 600 m**. Seuls le pseudo, l'avatar, l'équipe et les pas du jour apparaissent. **Blocage** dans les deux sens (met aussi fin à l'amitié) et retrait de la carte publique après **3 signalements** distincts. La fiche d'un joueur ne donne que des totaux (pas, série, rang, bilan de duels) |
 | Suppression de compte | Bouton dans l'onglet Profil, qui efface tout (obligatoire pour l'App Store) |
 
-Le schéma est dans `supabase/migrations/` : `20261021000000_init.sql` (profils, amis, pas, duels) puis `20261022000000_teams.sql` (guerre d'équipes) `20261023000000_map.sql` puis `20261024000000_players_map.sql` (carte des joueurs) et `20261025000000_anticheat.sql` (limites anti-triche).
+Le schéma est dans `supabase/migrations/` : `20261021000000_init.sql` (profils, amis, pas, duels) puis `20261022000000_teams.sql` (guerre d'équipes) `20261023000000_map.sql` puis `20261024000000_players_map.sql` (carte des joueurs), `20261025000000_anticheat.sql` (limites anti-triche), `20261026000000_leagues.sql` (ligues hebdomadaires par niveau), `20261027000000_duels.sql` (duels à accepter, gage) et `20261028000000_league_results.sql` (bilan de la semaine).
 
 ## Mise en place
 
@@ -46,6 +46,8 @@ Dans **Project Settings**, puis **API Keys**, copiez l'URL du projet et la clé 
 Les deux valeurs du projet de production sont dans `.env`, versionné : elles sont publiques et EAS l'envoie avec le projet. Pour un autre projet Supabase, ou pour revenir au mode démo, créez un `.env.local` (ignoré par git), qui a priorité : copiez `.env.example` et remplacez les valeurs, ou laissez-les vides pour le mode démo. Après un changement de ces valeurs, lancez une fois `npx expo start --clear`, sinon Metro peut garder les anciennes en cache.
 
 Ces deux valeurs sont **publiques** : elles se retrouvent dans l'app installée, et c'est prévu ainsi. La sécurité repose sur les règles de la base. Ne mettez **jamais** la clé `secret` ou `service_role` dans l'app.
+
+**Mettre à jour un projet existant :** collez dans le SQL Editor les migrations ajoutées depuis la dernière mise en place, dans l'ordre. Le projet de production a reçu `setup.sql` jusqu'à `20261025000000_anticheat.sql` : `supabase/update-2026-10-22.sql` regroupe les trois suivantes.
 
 ### Comptes par e-mail (code à 6 chiffres)
 
