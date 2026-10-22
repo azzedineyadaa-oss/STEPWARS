@@ -57,8 +57,9 @@ export async function ensureSession(db: SupabaseClient): Promise<string> {
 
 /** Adresse e-mail du compte, ou null tant qu'il est anonyme. */
 export async function currentEmail(db: SupabaseClient): Promise<string | null> {
-  const { data } = await db.auth.getSession();
-  return data.session?.user.email || null;
+  // getUser interroge le serveur : il voit aussi une adresse confirmée par lien.
+  const { data } = await db.auth.getUser();
+  return data.user?.email || null;
 }
 
 /**
@@ -72,6 +73,19 @@ export async function requestEmailLink(db: SupabaseClient, email: string): Promi
 
 export async function confirmEmailLink(db: SupabaseClient, email: string, code: string): Promise<void> {
   check(await db.auth.verifyOtp({ email: email.trim().toLowerCase(), token: code.trim(), type: 'email_change' }));
+}
+
+/**
+ * Sans modèle d'e-mail personnalisé, Supabase envoie un lien au lieu d'un code.
+ * Une fois le lien ouvert, l'adresse est liée côté serveur : on le vérifie
+ * auprès du serveur, puis on rafraîchit la session pour que l'app le sache.
+ */
+export async function isEmailLinked(db: SupabaseClient, email: string): Promise<boolean> {
+  const { data, error } = await db.auth.getUser();
+  if (error) throw new ApiError(friendlyError(error.message));
+  const linked = data.user?.email?.toLowerCase() === email.trim().toLowerCase();
+  if (linked) await db.auth.refreshSession();
+  return linked;
 }
 
 /** Nouveau téléphone : envoie un code de connexion, sans jamais créer de compte. */

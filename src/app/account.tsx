@@ -19,7 +19,7 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 export default function AccountScreen() {
   const params = useLocalSearchParams<{ mode?: string }>();
   const login = params.mode === 'login';
-  const { mode, settings, requestEmailLink, confirmEmailLink, requestLogin, confirmLogin, completeOnboarding } =
+  const { mode, settings, requestEmailLink, confirmEmailLink, checkEmailLinked, requestLogin, confirmLogin, completeOnboarding } =
     useAppStore();
   const [step, setStep] = useState<Step>('email');
   const [email, setEmail] = useState('');
@@ -126,6 +126,20 @@ export default function AccountScreen() {
               onSubmitEditing={() => code.length === 6 && verify()}
             />
             <Button title={busy ? '…' : 'Valider'} onPress={verify} disabled={code.length !== 6 || busy} />
+            {!login && mode === 'online' && (
+              <>
+                <Text style={styles.hint}>
+                  Tu as reçu un lien plutôt qu’un code ? Ouvre-le (une page d’erreur peut s’afficher, c’est normal), puis
+                  reviens ici.
+                </Text>
+                <Button
+                  title="J’ai ouvert le lien"
+                  variant="secondary"
+                  onPress={() => run(() => checkEmailLinked(email), 'done')}
+                  disabled={busy}
+                />
+              </>
+            )}
             <View style={styles.row}>
               <Text
                 style={styles.link}
@@ -198,6 +212,7 @@ const styles = StyleSheet.create({
   },
   codeInput: { fontSize: 28, letterSpacing: 10, fontWeight: '800', textAlign: 'center' },
   row: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: spacing.sm },
+  hint: { color: colors.textMuted, fontSize: 13, lineHeight: 19, marginTop: spacing.sm },
   link: { color: colors.textMuted, fontWeight: '700', fontSize: 15, padding: spacing.xs },
   error: {
     flexDirection: 'row',

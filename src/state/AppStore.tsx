@@ -121,6 +121,8 @@ type AppStore = PersistedState & {
   /** Sauvegarde : envoie un code à l'adresse, puis la lie au compte une fois le code saisi. */
   requestEmailLink: (email: string) => Promise<void>;
   confirmEmailLink: (email: string, code: string) => Promise<void>;
+  /** Variante sans code : l'utilisateur a ouvert le lien reçu par e-mail. */
+  checkEmailLinked: (email: string) => Promise<void>;
   /** Autre téléphone : envoie un code, puis remplace ce compte par celui de l'adresse. */
   requestLogin: (email: string) => Promise<void>;
   confirmLogin: (email: string, code: string) => Promise<void>;
@@ -516,6 +518,16 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     [requireOnline],
   );
 
+  const checkEmailLinked = useCallback(
+    async (email: string) => {
+      if (mode === 'online' && !(await api.isEmailLinked(requireOnline().db, email))) {
+        throw new api.ApiError('Pas encore confirmé : ouvre le lien reçu par e-mail, puis réessaie.');
+      }
+      setState((s) => ({ ...s, accountEmail: email.trim().toLowerCase() }));
+    },
+    [requireOnline],
+  );
+
   const requestLogin = useCallback(async (email: string) => {
     if (mode === 'online' && supabase) await api.requestLoginCode(supabase, email);
   }, []);
@@ -713,6 +725,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       deleteAccount,
       requestEmailLink,
       confirmEmailLink,
+      checkEmailLinked,
       requestLogin,
       confirmLogin,
       refresh,
@@ -750,6 +763,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       deleteAccount,
       requestEmailLink,
       confirmEmailLink,
+      checkEmailLinked,
       requestLogin,
       confirmLogin,
       refresh,
