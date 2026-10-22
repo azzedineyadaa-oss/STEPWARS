@@ -20,6 +20,9 @@ const challenge: Challenge = {
   startDay: '2026-03-30',
   days: 3,
   createdAt: '2026-03-29T10:00:00.000Z',
+  status: 'accepted',
+  incoming: false,
+  stake: null,
 };
 
 test('addDays traverse les fins de mois et d’année', () => {
@@ -103,4 +106,10 @@ test('pas de démo déterministes et proportionnels à la journée écoulée', (
 test('code ami : 6 caractères sans caractères ambigus', () => {
   const code = generateCode();
   assert.match(code, /^[A-HJ-NP-Z2-9]{6}$/);
+});
+
+test('un duel en attente ne compte pas encore', () => {
+  const pending: Challenge = { ...challenge, status: 'pending', incoming: true };
+  const r = evaluateChallenge(pending, '2026-04-05', { '2026-03-30': 9000 }, {});
+  assert.deepEqual(r, { status: 'pending', myTotal: 0, opponentTotal: 0, winner: null, daysElapsed: 0 });
 });

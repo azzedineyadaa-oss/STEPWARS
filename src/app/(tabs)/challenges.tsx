@@ -1,8 +1,8 @@
 import { Link, router } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { Avatar, Button, Card, Chip, SectionTitle, StatusBanner } from '@/components/ui';
+import { Avatar, Button, Card, Chip, SectionTitle, StatusBanner, tap } from '@/components/ui';
 import { ME_ID, buildLeaderboard, challengeDays, evaluateChallenge, lastDays, type Challenge } from '@/lib/game';
 import { useAppStore } from '@/state/AppStore';
 import { colors, font, formatSteps, spacing } from '@/theme';
@@ -22,6 +22,8 @@ function ChallengeRow({ challenge }: { challenge: Challenge }) {
 
   let status = `Jour ${result.daysElapsed}/${challenge.days}`;
   let tint: string = result.myTotal >= result.opponentTotal ? colors.success : colors.danger;
+  if (result.status === 'pending') [status, tint] = ['En attente de réponse', colors.textMuted];
+  if (result.status === 'upcoming') [status, tint] = ['Commence demain', colors.textMuted];
   if (result.winner === 'me') [status, tint] = ['Victoire', colors.success];
   if (result.winner === 'opponent') [status, tint] = ['Défaite', colors.danger];
   if (result.winner === 'tie') [status, tint] = ['Égalité', colors.textMuted];
@@ -36,12 +38,14 @@ function ChallengeRow({ challenge }: { challenge: Challenge }) {
               <Text style={styles.title}>{opponent?.name ?? 'Ami supprimé'}</Text>
               <Text style={[styles.status, { color: tint }]}>{status}</Text>
             </View>
-            <Text style={styles.score}>
-              {formatSteps(result.myTotal)}
-              <Text style={styles.scoreThem}> – {formatSteps(result.opponentTotal)}</Text>
-            </Text>
+            {result.status !== 'pending' && (
+              <Text style={styles.score}>
+                {formatSteps(result.myTotal)}
+                <Text style={styles.scoreThem}> – {formatSteps(result.opponentTotal)}</Text>
+              </Text>
+            )}
           </View>
-          {result.status !== 'finished' && (
+          {(result.status === 'active' || result.status === 'upcoming') && (
             <View style={styles.bar}>
               <View style={{ flex: myShare, backgroundColor: colors.primary }} />
               <View style={{ flex: 1 - myShare, backgroundColor: colors.surfaceAlt }} />
@@ -50,6 +54,56 @@ function ChallengeRow({ challenge }: { challenge: Challenge }) {
         </Card>
       </Pressable>
     </Link>
+  );
+}
+
+function Invitation({ challenge }: { challenge: Challenge }) {
+  const { friends, acceptChallenge, deleteChallenge } = useAppStore();
+  const [busy, setBusy] = useState(false);
+  const name = friends.find((f) => f.id === challenge.opponentId)?.name ?? 'Un ami';
+
+  const act = async (action: () => Promise<void>) => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      await action();
+    } catch (e) {
+      Alert.alert('Action impossible', e instanceof Error ? e.message : undefined);
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Card style={[{ gap: spacing.md }, styles.invitation]}>
+      <View style={styles.row}>
+        <Avatar id={challenge.opponentId} name={name} />
+        <View style={{ flex: 1 }}>
+          <Text style={styles.title}>{name} te défie</Text>
+          <Text style={styles.meta}>
+            {challenge.days === 7 ? '1 semaine' : `${challenge.days} jour${challenge.days > 1 ? 's' : ''}`}
+            {challenge.stake ? ` · ${challenge.stake}` : ''}
+          </Text>
+        </View>
+      </View>
+      <View style={styles.row}>
+        <View style={{ flex: 1 }}>
+          <Button
+            title="Accepter"
+            icon="flash"
+            disabled={busy}
+            onPress={() =>
+              act(async () => {
+                await acceptChallenge(challenge.id);
+                tap('success');
+              })
+            }
+          />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Button title="Refuser" variant="secondary" disabled={busy} onPress={() => act(() => deleteChallenge(challenge.id))} />
+        </View>
+      </View>
+    </Card>
   );
 }
 
@@ -97,8 +151,9 @@ function FriendsLeaderboard() {
 
 export default function ChallengesScreen() {
   const { challenges, today, history, friendHistory } = useAppStore();
+  const invitations = challenges.filter((c) => c.status === 'pending' && c.incoming);
   // En cours d'abord, puis terminés.
-  const sorted = [...challenges].sort((a, b) => {
+  const sorted = [...challenges.filter((c) => !(c.status === 'pending' && c.incoming))].sort((a, b) => {
     const fa = evaluateChallenge(a, today, history, friendHistory(a.opponentId, challengeDays(a))).status === 'finished';
     const fb = evaluateChallenge(b, today, history, friendHistory(b.opponentId, challengeDays(b))).status === 'finished';
     return Number(fa) - Number(fb);
@@ -107,6 +162,16 @@ export default function ChallengesScreen() {
   return (
     <ScrollView style={{ backgroundColor: colors.background }} contentContainerStyle={styles.container}>
       <StatusBanner />
+      {invitations.length > 0 && (
+        <>
+          <SectionTitle>Invitations</SectionTitle>
+          <View style={{ gap: spacing.sm, marginBottom: spacing.md }}>
+            {invitations.map((c) => (
+              <Invitation key={c.id} challenge={c} />
+            ))}
+          </View>
+        </>
+      )}
       <Button title="Nouveau duel" icon="flash" onPress={() => router.push('/challenge/new')} />
 
       <SectionTitle>Mes duels</SectionTitle>
@@ -142,4 +207,5 @@ const styles = StyleSheet.create({
   boardName: { color: colors.text, fontSize: 15, fontWeight: '700', flex: 1 },
   boardSteps: { color: colors.text, fontSize: 15, fontWeight: '800', fontVariant: ['tabular-nums'] },
   meta: { color: colors.textMuted, fontSize: 14, fontWeight: '500' },
+  invitation: { borderColor: colors.primary, borderWidth: 1 },
 });

@@ -20,6 +20,8 @@ const row = {
   start_day: '2026-10-20',
   days: 3,
   created_at: '2026-10-20T08:00:00Z',
+  status: 'pending' as const,
+  stake: 'Le perdant paie le café',
 };
 
 test('challengeFromRow : l’adversaire est toujours l’autre joueur', () => {
@@ -31,7 +33,11 @@ test('challengeFromRow : l’adversaire est toujours l’autre joueur', () => {
     startDay: '2026-10-20',
     days: 3,
     createdAt: '2026-10-20T08:00:00Z',
+    status: 'pending',
+    incoming: false,
+    stake: 'Le perdant paie le café',
   });
+  assert.equal(challengeFromRow(row, 'bob').incoming, true);
 });
 
 test('groupSteps regroupe les pas par joueur', () => {

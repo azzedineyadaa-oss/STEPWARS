@@ -46,15 +46,20 @@ test('parcours complet : profil, amis, pas, défi, retrait', async () => {
   assert.deepEqual(bobSnap.playerSteps[ALICE], { [today]: 4200, [addDays(today, -1)]: 9100 });
   assert.deepEqual(bobSnap.mySteps, {});
 
-  const challenge = await api.createChallenge(bob, BOB, ALICE, today, 3);
+  const challenge = await api.createChallenge(bob, BOB, ALICE, today, 3, ' Le perdant paie le café ');
   assert.equal(challenge.opponentId, ALICE);
   assert.equal(challenge.startDay, today);
+  assert.deepEqual([challenge.status, challenge.incoming, challenge.stake], ['pending', false, 'Le perdant paie le café']);
 
   snap = await api.fetchSnapshot(alice, ALICE, today);
   assert.equal(snap.profile.daily_goal, 10000);
   assert.deepEqual(snap.friends.map((f) => f.id), [BOB]);
   assert.equal(snap.challenges.length, 1);
   assert.equal(snap.challenges[0].opponentId, BOB, 'vu par Alice, l’adversaire est Bob');
+  assert.equal(snap.challenges[0].incoming, true, 'Alice doit accepter');
+  await assert.rejects(api.acceptChallenge(bob, challenge.id, today), api.ApiError, 'Bob ne peut pas accepter son propre duel');
+  assert.equal(await api.acceptChallenge(alice, challenge.id, today), today);
+  assert.equal((await api.fetchSnapshot(bob, BOB, today)).challenges[0].status, 'accepted');
   assert.deepEqual(snap.mySteps, { [today]: 4200, [addDays(today, -1)]: 9100 });
 
   // Un tiers ne voit rien et ne peut pas défier sans être ami.

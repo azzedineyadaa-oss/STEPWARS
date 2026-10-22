@@ -9,7 +9,7 @@ insert into auth.users (id) values
   ('00000000-0000-0000-0000-00000000000b'),
   ('00000000-0000-0000-0000-00000000000c');
 
-select pg_temp.check((select count(*) = 3 from public.profiles), 'un profil est créé à chaque inscription');
+select pg_temp.check((select count(*) = 3 from public.profiles where id::text like '00000000-0000-0000-0000-00000000000_'), 'un profil est créé à chaque inscription');
 select pg_temp.check((select bool_and(friend_code ~ '^[A-HJ-NP-Z2-9]{6}$') from public.profiles), 'codes amis valides');
 
 -- Alice
@@ -76,7 +76,7 @@ select pg_temp.check((select count(*) = 0 from public.challenges), 'un tiers ne 
 select pg_temp.check((select count(*) = 1 from public.profiles), 'un tiers ne voit pas les autres profils');
 delete from public.challenges;
 reset role;
-select pg_temp.check((select count(*) = 1 from public.challenges), 'un tiers ne peut pas supprimer le défi');
+select pg_temp.check((select count(*) = 1 from public.challenges where opponent_id = '00000000-0000-0000-0000-00000000000a'), 'un tiers ne peut pas supprimer le défi');
 
 -- Visiteur non connecté
 select pg_temp.act_as(null);

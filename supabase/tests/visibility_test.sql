@@ -132,8 +132,8 @@ reset role;
 select pg_temp.act_as('00000000-0000-0000-0000-0000000000f1');
 select public.record_steps(jsonb_build_array(jsonb_build_object('day', current_date - 2, 'steps', 9000)));
 reset role;
-insert into public.challenges (challenger_id, opponent_id, start_day, days)
-values ('00000000-0000-0000-0000-0000000000f1', '00000000-0000-0000-0000-0000000000f2', current_date - 2, 1);
+insert into public.challenges (challenger_id, opponent_id, start_day, days, status)
+values ('00000000-0000-0000-0000-0000000000f1', '00000000-0000-0000-0000-0000000000f2', current_date - 2, 1, 'accepted');
 select pg_temp.act_as('00000000-0000-0000-0000-0000000000f2');
 select pg_temp.check(
   (select duels_won = 1 and duels_lost = 0 and is_friend from public.player_card('00000000-0000-0000-0000-0000000000f1', current_date)),

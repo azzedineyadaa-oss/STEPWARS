@@ -22,6 +22,8 @@ export type ChallengeRow = {
   start_day: DayKey;
   days: number;
   created_at: string;
+  status: 'pending' | 'accepted';
+  stake: string | null;
 };
 
 export type LeagueRow = {
@@ -55,6 +57,9 @@ export function challengeFromRow(row: ChallengeRow, myId: string): Challenge {
     startDay: row.start_day,
     days: row.days,
     createdAt: row.created_at,
+    status: row.status,
+    incoming: row.challenger_id !== myId,
+    stake: row.stake,
   };
 }
 
@@ -177,6 +182,8 @@ export function friendlyError(message: string | undefined): string {
   if (message.includes('cannot_report_own_team')) return 'Tu ne peux pas signaler ta propre équipe.';
   if (message.includes('teams_name_check')) return 'Le nom d’équipe doit faire entre 2 et 24 caractères.';
   if (message.includes('player_not_visible')) return 'Ce joueur n’est plus visible.';
+  if (message.includes('challenge_not_found')) return 'Ce duel n’existe plus ou a déjà été accepté.';
+  if (message.includes('challenges_stake_check')) return 'Le gage doit faire 60 caractères au plus.';
   if (message.includes('cannot_block_self') || message.includes('cannot_report_self')) return 'C’est toi !';
   if (message.includes('not_authenticated')) return 'Connexion au serveur perdue. Relancez l’app.';
   if (/expired|invalid.*(token|otp)|otp.*invalid/i.test(message)) return 'Code incorrect ou expiré. Vérifie-le ou demande un nouveau code.';

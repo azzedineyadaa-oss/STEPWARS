@@ -42,6 +42,8 @@ function check<T>(result: { data: T; error: { message: string } | null }): T {
   return result.data;
 }
 
+const CHALLENGE_COLUMNS = 'id, challenger_id, opponent_id, start_day, days, created_at, status, stake';
+
 /** Ouvre (ou reprend) une session. Le compte est anonyme : aucun e-mail demandé. */
 export async function ensureSession(db: SupabaseClient): Promise<string> {
   const { data } = await db.auth.getSession();
@@ -104,7 +106,7 @@ export async function fetchSnapshot(db: SupabaseClient, myId: string, today: Day
   const [profileRow, friendRows, challengeRows, boardRows] = await Promise.all([
     db.from('profiles').select(PROFILE_COLUMNS).eq('id', myId).single(),
     db.from('friendships').select('friend:profiles!friendships_friend_id_fkey(id, name, avatar)').eq('user_id', myId),
-    db.from('challenges').select('id, challenger_id, opponent_id, start_day, days, created_at').order('created_at', { ascending: false }),
+    db.from('challenges').select(CHALLENGE_COLUMNS).order('created_at', { ascending: false }),
     db.rpc('team_leaderboard', { from_day: week, to_day: addDays(week, 6) }),
   ]).then(([p, f, c, b]) => [check(p), check(f), check(c), check(b)] as const);
 
@@ -164,23 +166,32 @@ export async function removeFriend(db: SupabaseClient, friendId: string): Promis
   check(await db.rpc('remove_friend', { friend: friendId }));
 }
 
+/** Lance un duel : il attend que l'adversaire l'accepte. */
 export async function createChallenge(
   db: SupabaseClient,
   myId: string,
   opponentId: string,
   startDay: DayKey,
   days: number,
+  stake: string | null = null,
 ): Promise<Challenge> {
   const row = check(
     await db
       .from('challenges')
-      .insert({ challenger_id: myId, opponent_id: opponentId, start_day: startDay, days })
-      .select('id, challenger_id, opponent_id, start_day, days, created_at')
+      .insert({ challenger_id: myId, opponent_id: opponentId, start_day: startDay, days, stake: stake?.trim() || null })
+      .select(CHALLENGE_COLUMNS)
       .single(),
   ) as ChallengeRow;
   return challengeFromRow(row, myId);
 }
 
+/** Accepte un duel reçu ; renvoie son premier jour (aujourd'hui s'il a été lancé avant). */
+export async function acceptChallenge(db: SupabaseClient, id: string, today: DayKey): Promise<DayKey> {
+  const rows = check(await db.rpc('accept_challenge', { challenge: id, day: today })) as { start_day: DayKey }[];
+  return rows[0].start_day;
+}
+
+/** Supprime un duel : l'annuler, le refuser ou l'effacer une fois terminé. */
 export async function deleteChallenge(db: SupabaseClient, id: string): Promise<void> {
   check(await db.from('challenges').delete().eq('id', id));
 }

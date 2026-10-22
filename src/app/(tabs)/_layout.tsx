@@ -3,6 +3,7 @@ import { Tabs } from 'expo-router';
 import type { ComponentProps } from 'react';
 import type { ColorValue } from 'react-native';
 
+import { useAppStore } from '@/state/AppStore';
 import { colors } from '@/theme';
 
 type IconName = ComponentProps<typeof Ionicons>['name'];
@@ -15,6 +16,8 @@ function tabIcon(name: IconName) {
 }
 
 export default function TabsLayout() {
+  const { challenges } = useAppStore();
+  const invitations = challenges.filter((c) => c.status === 'pending' && c.incoming).length;
   return (
     <Tabs
       screenOptions={{
@@ -27,12 +30,16 @@ export default function TabsLayout() {
         headerTitleStyle: { fontWeight: '800' },
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.textMuted,
+        tabBarBadgeStyle: { backgroundColor: colors.primary, color: colors.onPrimary, fontWeight: '800' },
       }}
     >
       <Tabs.Screen name="index" options={{ title: 'Accueil', headerShown: false, tabBarIcon: tabIcon('footsteps') }} />
       <Tabs.Screen name="war" options={{ title: 'Ligue', headerShown: false, tabBarIcon: tabIcon('trophy') }} />
       <Tabs.Screen name="map" options={{ title: 'Carte', headerShown: false, tabBarIcon: tabIcon('map') }} />
-      <Tabs.Screen name="challenges" options={{ title: 'Duels', tabBarIcon: tabIcon('flash') }} />
+      <Tabs.Screen
+        name="challenges"
+        options={{ title: 'Duels', tabBarIcon: tabIcon('flash'), tabBarBadge: invitations > 0 ? invitations : undefined }}
+      />
       <Tabs.Screen name="profile" options={{ title: 'Profil', tabBarIcon: tabIcon('person-circle') }} />
     </Tabs>
   );

@@ -21,9 +21,15 @@ export type Challenge = {
   /** Durée en jours. */
   days: number;
   createdAt: string;
+  /** Un duel ne compte qu'une fois accepté par l'adversaire. */
+  status: 'pending' | 'accepted';
+  /** Lancé par l'adversaire : c'est à moi d'accepter ou de refuser. */
+  incoming: boolean;
+  /** Gage facultatif (« le perdant paie le café »). */
+  stake: string | null;
 };
 
-export type ChallengeStatus = 'upcoming' | 'active' | 'finished';
+export type ChallengeStatus = 'pending' | 'upcoming' | 'active' | 'finished';
 
 export type ChallengeResult = {
   status: ChallengeStatus;
@@ -83,6 +89,9 @@ export function evaluateChallenge(
   myHistory: StepHistory,
   opponentHistory: StepHistory,
 ): ChallengeResult {
+  if (challenge.status === 'pending') {
+    return { status: 'pending', myTotal: 0, opponentTotal: 0, winner: null, daysElapsed: 0 };
+  }
   const days = challengeDays(challenge);
   const lastDay = days[days.length - 1];
 

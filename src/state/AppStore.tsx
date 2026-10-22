@@ -99,7 +99,9 @@ type AppStore = PersistedState & {
   /** En ligne : `input` est le code ami. En démo : le nom de l'ami. */
   addFriend: (input: string) => Promise<Friend>;
   removeFriend: (id: string) => Promise<void>;
-  createChallenge: (opponentId: string, days: number) => Promise<Challenge>;
+  /** Lance un duel ; il attend que l'adversaire l'accepte. */
+  createChallenge: (opponentId: string, days: number, stake?: string | null) => Promise<Challenge>;
+  acceptChallenge: (id: string) => Promise<void>;
   deleteChallenge: (id: string) => Promise<void>;
   createTeam: (name: string, emoji: string) => Promise<Team>;
   joinTeam: (code: string) => Promise<Team>;
@@ -135,7 +137,22 @@ function initialState(): PersistedState {
     settings: { onboarded: false, reminderHour: 19 },
     celebratedDay: null,
     friends: mode === 'demo' ? DEMO_FRIENDS : [],
-    challenges: [],
+    // En démo, Lina vient de te défier : de quoi voir une invitation.
+    challenges:
+      mode === 'demo'
+        ? [
+            {
+              id: 'demo-invitation',
+              opponentId: 'demo-lina',
+              startDay: toDayKey(new Date()),
+              days: 3,
+              createdAt: new Date().toISOString(),
+              status: 'pending',
+              incoming: true,
+              stake: 'Le perdant paie le café',
+            },
+          ]
+        : [],
     history: {},
     team: null,
     teamMembers: [],
@@ -392,7 +409,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   );
 
   const createChallenge = useCallback(
-    async (opponentId: string, days: number) => {
+    async (opponentId: string, days: number, stake: string | null = null) => {
       let challenge: Challenge;
       if (mode === 'demo') {
         challenge = {
@@ -401,13 +418,38 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
           startDay: today,
           days,
           createdAt: new Date().toISOString(),
+          status: 'pending',
+          incoming: false,
+          stake: stake?.trim() || null,
         };
+        // L'ami simulé accepte au bout de quelques secondes.
+        setTimeout(
+          () =>
+            setState((s) => ({
+              ...s,
+              challenges: s.challenges.map((c) => (c.id === challenge.id ? { ...c, status: 'accepted' } : c)),
+            })),
+          4000,
+        );
       } else {
         const { db, uid } = requireOnline();
-        challenge = await api.createChallenge(db, uid, opponentId, today, days);
+        challenge = await api.createChallenge(db, uid, opponentId, today, days, stake);
       }
       setState((s) => ({ ...s, challenges: [challenge, ...s.challenges] }));
       return challenge;
+    },
+    [today, requireOnline],
+  );
+
+  const acceptChallenge = useCallback(
+    async (id: string) => {
+      const startDay = mode === 'online' ? await api.acceptChallenge(requireOnline().db, id, today) : today;
+      setState((s) => ({
+        ...s,
+        challenges: s.challenges.map((c) =>
+          c.id === id ? { ...c, status: 'accepted', startDay: startDay > c.startDay ? startDay : c.startDay } : c,
+        ),
+      }));
     },
     [today, requireOnline],
   );
@@ -629,6 +671,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       addFriend,
       removeFriend,
       createChallenge,
+      acceptChallenge,
       deleteChallenge,
       createTeam,
       joinTeam,
@@ -662,6 +705,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       addFriend,
       removeFriend,
       createChallenge,
+      acceptChallenge,
       deleteChallenge,
       createTeam,
       joinTeam,

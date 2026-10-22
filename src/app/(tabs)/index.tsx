@@ -159,6 +159,30 @@ function DuelCard() {
   const active = challenges
     .map((c) => ({ c, r: evaluateChallenge(c, today, history, friendHistory(c.opponentId, challengeDays(c))) }))
     .filter(({ r }) => r.status === 'active');
+  const invitations = challenges.filter((c) => c.status === 'pending' && c.incoming);
+
+  const invitationCards = invitations.slice(0, 2).map((c) => {
+    const name = friends.find((f) => f.id === c.opponentId)?.name ?? 'Un ami';
+    return (
+      <Pressable key={c.id} onPress={() => router.push({ pathname: '/challenge/[id]', params: { id: c.id } })}>
+        <Card style={[styles.duelCard, styles.invitation]}>
+          <Avatar id={c.opponentId} name={name} />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.duelName}>{name} te défie</Text>
+            <Text style={styles.cardMeta} numberOfLines={1}>
+              {c.days === 7 ? '1 semaine' : `${c.days} jour${c.days > 1 ? 's' : ''}`}
+              {c.stake ? ` · ${c.stake}` : ''}
+            </Text>
+          </View>
+          <Text style={styles.ctaText}>Répondre</Text>
+        </Card>
+      </Pressable>
+    );
+  });
+
+  if (active.length === 0 && invitations.length > 0) {
+    return <View style={{ gap: spacing.sm }}>{invitationCards}</View>;
+  }
 
   if (active.length === 0) {
     return (
@@ -174,6 +198,7 @@ function DuelCard() {
 
   return (
     <View style={{ gap: spacing.sm }}>
+      {invitationCards}
       {active.slice(0, 3).map(({ c, r }) => {
         const opponent = friends.find((f) => f.id === c.opponentId);
         const ahead = r.myTotal >= r.opponentTotal;
@@ -332,6 +357,7 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
+  invitation: { borderColor: colors.primary, borderWidth: 1 },
   leagueIcon: {
     width: 40,
     height: 40,
