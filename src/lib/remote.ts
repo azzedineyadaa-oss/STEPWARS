@@ -1,5 +1,6 @@
 // Conversion entre les lignes Supabase et les types de l'app. Pur, testé avec `node --test`.
 import type { Challenge, DayKey, Friend, StepHistory, Team, TeamMember, TeamStanding } from './game.ts';
+import type { Division, League } from './league.ts';
 import type { MapPlayer, PlayerCard } from './players.ts';
 
 export type ProfileRow = {
@@ -22,6 +23,29 @@ export type ChallengeRow = {
   days: number;
   created_at: string;
 };
+
+export type LeagueRow = {
+  week_start: DayKey;
+  division: number;
+  user_id: string;
+  name: string;
+  steps: number | string;
+  league_position: number;
+  members: number;
+  is_me: boolean;
+};
+
+/** Lignes de `my_league`, déjà classées ; null si la réponse est vide. */
+export function leagueFromRows(rows: LeagueRow[]): League | null {
+  if (rows.length === 0) return null;
+  return {
+    division: Math.min(5, Math.max(1, rows[0].division)) as Division,
+    weekStart: rows[0].week_start,
+    entries: [...rows]
+      .sort((a, b) => a.league_position - b.league_position)
+      .map((r) => ({ id: r.user_id, name: r.name, steps: Number(r.steps), position: r.league_position, isMe: r.is_me })),
+  };
+}
 
 /** Un défi vu par `myId` : l'adversaire est l'autre participant, quel que soit le lanceur. */
 export function challengeFromRow(row: ChallengeRow, myId: string): Challenge {

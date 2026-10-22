@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import {
   challengeFromRow,
   friendlyError,
+  leagueFromRows,
   groupSteps,
   pendingUploads,
   teamMemberFromRow,
@@ -99,4 +100,21 @@ test('carte : conversion des joueurs et des fiches', () => {
   assert.equal(card.teamName, 'A');
   assert.equal(card.duelsTied, 9);
   assert.equal(friendlyError('player_not_visible'), 'Ce joueur n’est plus visible.');
+});
+
+test('ligue : conversion des lignes de my_league', () => {
+  const base = { week_start: '2026-10-19', division: 3, members: 2 };
+  const league = leagueFromRows([
+    { ...base, user_id: 'b', name: 'Bob', steps: '1200', league_position: 2, is_me: true },
+    { ...base, user_id: 'a', name: 'Anna', steps: 5000, league_position: 1, is_me: false },
+  ]);
+  assert.deepEqual(league, {
+    division: 3,
+    weekStart: '2026-10-19',
+    entries: [
+      { id: 'a', name: 'Anna', steps: 5000, position: 1, isMe: false },
+      { id: 'b', name: 'Bob', steps: 1200, position: 2, isMe: true },
+    ],
+  });
+  assert.equal(leagueFromRows([]), null);
 });

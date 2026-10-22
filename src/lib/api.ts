@@ -12,18 +12,21 @@ import {
   type TeamStanding,
 } from '@/lib/game';
 import type { Cell } from '@/lib/hex';
+import type { League } from '@/lib/league';
 import type { MapPlayer, MapVisibility, PlayerCard } from '@/lib/players';
 import {
   challengeFromRow,
   friendFromRow,
   friendlyError,
   groupSteps,
+  leagueFromRows,
   teamFromRow,
   teamMemberFromRow,
   teamStandingFromRow,
   mapPlayerFromRow,
   playerCardFromRow,
   type ChallengeRow,
+  type LeagueRow,
   type MapPlayerRow,
   type PlayerCardRow,
   type ProfileRow,
@@ -132,6 +135,11 @@ export async function fetchSnapshot(db: SupabaseClient, myId: string, today: Day
   const { [myId]: mySteps = {}, ...playerSteps } = groupSteps(stepRows);
 
   return { profile, friends, challenges, team, teamMembers, teamBoard, playerSteps, mySteps };
+}
+
+/** Ma ligue de la semaine ; le serveur m'y place au premier appel de la semaine. */
+export async function fetchLeague(db: SupabaseClient, today: DayKey): Promise<League | null> {
+  return leagueFromRows(check(await db.rpc('my_league', { day: today })) as LeagueRow[]);
 }
 
 export async function updateProfile(

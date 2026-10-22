@@ -26,6 +26,7 @@ import {
   type TeamMember,
   type TeamStanding,
 } from '@/lib/game';
+import { demoLeague, type League } from '@/lib/league';
 import { pendingUploads } from '@/lib/remote';
 import { supabase } from '@/lib/supabase';
 import { usePedometerSync, type PedometerState } from '@/hooks/usePedometerSync';
@@ -34,6 +35,8 @@ const STORAGE_KEY = 'stepwars:v1';
 const REFRESH_INTERVAL_MS = 5 * 60_000;
 const UPLOAD_DELAY_MS = 10_000;
 const PROFILE_SAVE_DELAY_MS = 800;
+// La ligue suit les envois de pas, mais pas plus d'une fois par minute.
+const LEAGUE_MIN_INTERVAL_MS = 60_000;
 
 export type Profile = {
   name: string;
@@ -74,6 +77,8 @@ type PersistedState = {
   accountId: string | null;
   /** Adresse qui permet de retrouver le compte sur un autre téléphone (null : compte anonyme). */
   accountEmail: string | null;
+  /** En ligne : ma ligue de la semaine, gardée pour l'affichage hors connexion. */
+  league: League | null;
 };
 
 type AppStore = PersistedState & {
@@ -116,6 +121,8 @@ type AppStore = PersistedState & {
   refresh: () => Promise<void>;
   /** Après une erreur : rouvre la session si besoin, sinon rafraîchit. */
   retry: () => void;
+  /** Ma ligue de la semaine (simulée en démo) ; null tant que le serveur ne m'a pas placé. */
+  currentLeague: League | null;
   /** Historique de pas d'un autre joueur (ami ou coéquipier) ; simulé en mode démo. */
   friendHistory: (playerId: string, days: DayKey[]) => StepHistory;
 };
@@ -124,7 +131,7 @@ const mode: Mode = supabase ? 'online' : 'demo';
 
 function initialState(): PersistedState {
   return {
-    profile: { name: 'Moi', avatar: '🏃', dailyGoal: 8000, friendCode: mode === 'demo' ? generateCode() : '' },
+    profile: { name: 'Moi', avatar: '🏃', dailyGoal: 10000, friendCode: mode === 'demo' ? generateCode() : '' },
     settings: { onboarded: false, reminderHour: 19 },
     celebratedDay: null,
     friends: mode === 'demo' ? DEMO_FRIENDS : [],
@@ -137,6 +144,7 @@ function initialState(): PersistedState {
     uploaded: {},
     accountId: null,
     accountEmail: null,
+    league: null,
   };
 }
 
@@ -151,6 +159,8 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
   const [now, setNow] = useState(() => new Date());
   const [userId, setUserId] = useState<string | null>(null);
+  // Incrémenté à chaque rafraîchissement : recharge aussi la ligue.
+  const [leagueTick, setLeagueTick] = useState(0);
   const [sync, setSync] = useState<SyncState>({ status: mode === 'online' ? 'connecting' : 'ok' });
   // Incrémenté pour rouvrir une session (après suppression du compte).
   const [sessionNonce, setSessionNonce] = useState(0);
@@ -251,6 +261,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
         };
       });
       setSync({ status: 'ok' });
+      setLeagueTick((t) => t + 1);
     } catch (e) {
       setSync({ status: 'error', message: messageOf(e) });
     }
@@ -295,6 +306,24 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   }, [state.history, state.uploaded, state.accountId, userId]);
 
   useEffect(() => () => clearTimeout(uploadTimer.current), []);
+
+  // Ligue : chargée une fois mes pas envoyés, pour que le serveur me place au
+  // bon niveau dès ma première semaine, puis à chaque rafraîchissement.
+  const leagueLoadedAt = useRef(0);
+  const stepsInSync =
+    state.accountId === userId && pendingUploads(state.history, state.uploaded, addDays(today, -7)).length === 0;
+  useEffect(() => {
+    if (!supabase || !userId || !stepsInSync) return;
+    const stale = state.league === null || state.league.weekStart !== weekStart(today);
+    if (!stale && Date.now() - leagueLoadedAt.current < LEAGUE_MIN_INTERVAL_MS) return;
+    leagueLoadedAt.current = Date.now();
+    api
+      .fetchLeague(supabase, today)
+      .then((league) => setState((s) => ({ ...s, league })))
+      .catch((e) => console.warn('Ligue indisponible', e));
+    // `state.league` exclu : le recharger ne doit pas relancer un appel.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId, stepsInSync, today, leagueTick]);
 
   // --- Actions ----------------------------------------------------------------
 
@@ -441,7 +470,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
         pendingProfile.current = null;
         setUserId(id);
       }
-      setState((s) => ({ ...s, accountEmail: email.trim().toLowerCase() }));
+      setState((s) => ({ ...s, accountEmail: email.trim().toLowerCase(), league: mode === 'online' ? null : s.league }));
     },
     [],
   );
@@ -575,6 +604,14 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     ];
   }, [teamMembers, friendHistory, warDays, teamBoard, team, today, dayProgress]);
 
+  const currentLeague = useMemo(
+    () =>
+      mode === 'demo'
+        ? demoLeague({ id: ME_ID, name: state.profile.name }, history, today, weekStart(today), dayProgress)
+        : state.league,
+    [state.profile.name, state.league, history, today, dayProgress],
+  );
+
   const value = useMemo<AppStore>(
     () => ({
       ...state,
@@ -609,6 +646,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       refresh,
       retry,
       friendHistory,
+      currentLeague,
     }),
     [
       state,
@@ -642,6 +680,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       refresh,
       retry,
       friendHistory,
+      currentLeague,
     ],
   );
 

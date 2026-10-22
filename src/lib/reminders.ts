@@ -36,7 +36,7 @@ export function reminderMessage(streak: number, hasTeam: boolean): { title: stri
     };
   }
   if (hasTeam) {
-    return { title: 'Ton équipe compte sur toi', body: 'Chaque pas compte dans la guerre de la semaine.' };
+    return { title: 'Ton équipe compte sur toi', body: 'Chaque pas compte pour l’équipe cette semaine.' };
   }
   return { title: 'Il est encore temps', body: 'Une petite marche ce soir pour atteindre ton objectif ?' };
 }

@@ -47,7 +47,7 @@ function RootNavigator() {
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="challenge/new" options={{ title: 'Nouveau duel', presentation: 'modal' }} />
         <Stack.Screen name="challenge/[id]" options={{ title: 'Duel' }} />
-        <Stack.Screen name="team/new" options={{ title: 'Guerre d’équipes', presentation: 'modal' }} />
+        <Stack.Screen name="team/new" options={{ title: 'Équipe', presentation: 'modal' }} />
         <Stack.Screen name="player/[id]" options={{ title: 'Joueur', presentation: 'modal' }} />
         <Stack.Screen name="add/[code]" options={{ title: 'Invitation', presentation: 'modal' }} />
         <Stack.Screen name="join/[code]" options={{ title: 'Invitation', presentation: 'modal' }} />

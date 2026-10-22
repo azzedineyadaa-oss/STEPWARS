@@ -16,6 +16,7 @@ import {
   rankByScore,
   warTimeLeft,
 } from '@/lib/game';
+import { divisionName, leagueTarget, zoneFor } from '@/lib/league';
 import { useAppStore } from '@/state/AppStore';
 import { colors, font, formatSteps, radius, spacing } from '@/theme';
 
@@ -34,6 +35,66 @@ function message(steps: number, goal: number) {
   if (steps >= goal) return `Objectif atteint. ${formatSteps(steps - goal)} pas de plus pour ton équipe.`;
   if (steps === 0) return 'Aucun pas pour l’instant aujourd’hui.';
   return `Encore ${formatSteps(goal - steps)} pas pour atteindre ton objectif.`;
+}
+
+function LeagueCard() {
+  const { currentLeague: league } = useAppStore();
+  const left = warTimeLeft(new Date());
+  const me = league?.entries.find((e) => e.isMe);
+
+  if (!league || !me) {
+    return (
+      <Card style={styles.warCard}>
+        <Text style={styles.cardText}>Recherche de joueurs de ton niveau…</Text>
+      </Card>
+    );
+  }
+
+  const zone = zoneFor(me.position, league.entries.length, league.division);
+  const target = leagueTarget(league);
+  const hint =
+    target?.kind === 'escape'
+      ? `Encore ${formatSteps(target.steps)} pas pour sortir de la zone de descente.`
+      : target?.kind === 'promote'
+        ? `Encore ${formatSteps(target.steps)} pas pour monter en ${divisionName(league.division + 1)}.`
+        : target?.kind === 'overtake'
+          ? `${formatSteps(target.steps)} pas pour dépasser ${target.name}.`
+          : target?.kind === 'lead'
+            ? 'Tu es en tête de ta ligue. Garde le rythme jusqu’à dimanche.'
+            : 'Les autres joueurs arrivent au fil de la semaine.';
+
+  return (
+    <Pressable onPress={() => router.navigate('/war')}>
+      <Card style={styles.warCard}>
+        <View style={styles.rowBetween}>
+          <Text style={styles.label}>Ligue {divisionName(league.division)}</Text>
+          <Text style={styles.label}>
+            Fin dans {left.days} j {left.hours} h
+          </Text>
+        </View>
+        <View style={[styles.rowBetween, { marginTop: spacing.md }]}>
+          <View style={styles.teamRow}>
+            <View style={[styles.leagueIcon, zone === 'up' && { backgroundColor: colors.success }, zone === 'down' && { backgroundColor: colors.danger }]}>
+              <Ionicons
+                name={zone === 'up' ? 'trending-up' : zone === 'down' ? 'trending-down' : 'trophy'}
+                size={20}
+                color={colors.onPrimary}
+              />
+            </View>
+            <View style={{ flexShrink: 1 }}>
+              <Text style={styles.cardTitle}>{zone === 'up' ? 'Zone de montée' : zone === 'down' ? 'Zone de descente' : 'En course'}</Text>
+              <Text style={styles.cardMeta}>{formatSteps(me.steps)} pas cette semaine</Text>
+            </View>
+          </View>
+          <Text style={styles.rank}>
+            {me.position}
+            <Text style={styles.rankOf}>/{league.entries.length}</Text>
+          </Text>
+        </View>
+        <Text style={[styles.cardText, { marginTop: spacing.md }]}>{hint}</Text>
+      </Card>
+    </Pressable>
+  );
 }
 
 function WarCard() {
@@ -144,7 +205,7 @@ function DuelCard() {
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
-  const { todaySteps, profile, history, today, pedometer, streak, celebratedDay, markCelebrated, ready, simulateSteps } =
+  const { todaySteps, profile, history, today, pedometer, streak, celebratedDay, markCelebrated, ready, simulateSteps, team } =
     useAppStore();
   const goal = profile.dailyGoal;
   const done = todaySteps >= goal;
@@ -214,8 +275,15 @@ export default function HomeScreen() {
           />
         </Card>
 
-        <SectionTitle>Guerre d’équipes</SectionTitle>
-        <WarCard />
+        <SectionTitle>Ma ligue</SectionTitle>
+        <LeagueCard />
+
+        {team && (
+          <>
+            <SectionTitle>Mon équipe</SectionTitle>
+            <WarCard />
+          </>
+        )}
 
         <SectionTitle>Duels</SectionTitle>
         <DuelCard />
@@ -264,6 +332,14 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
+  leagueIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: radius.md,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   container: { padding: spacing.md, paddingBottom: spacing.xl },
   label: { color: colors.textMuted, ...font.label },
   header: { flexDirection: 'row', alignItems: 'flex-end', marginBottom: spacing.sm, gap: spacing.md },

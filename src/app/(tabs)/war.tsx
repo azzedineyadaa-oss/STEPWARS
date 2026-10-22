@@ -1,13 +1,15 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
+import { useState } from 'react';
 import { Alert, Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Avatar, Button, Card, SectionTitle, StatusBanner, TeamBadge, type IconName } from '@/components/ui';
+import { LeagueView } from '@/components/LeagueView';
+import { Avatar, Button, Card, SectionTitle, StatusBanner, TeamBadge, tap, type IconName } from '@/components/ui';
 import { isoWeek, memberContribution, nextTarget, rankByScore, warTimeLeft } from '@/lib/game';
 import { teamInviteMessage } from '@/lib/invite';
 import { useAppStore } from '@/state/AppStore';
-import { colors, font, formatSteps, spacing } from '@/theme';
+import { colors, font, formatSteps, radius, spacing } from '@/theme';
 
 const RULES: { icon: IconName; text: string }[] = [
   { icon: 'people-outline', text: 'Monte ton équipe : amis, famille, collègues, jusqu’à 30.' },
@@ -18,7 +20,7 @@ const RULES: { icon: IconName; text: string }[] = [
 function NoTeam() {
   return (
     <>
-      <Text style={styles.intro}>Chaque semaine, ton équipe affronte toutes les autres au total de pas.</Text>
+      <Text style={styles.intro}>En plus de ta ligue, monte une équipe : chaque semaine, elle affronte toutes les autres au total de pas.</Text>
       <Card style={{ gap: spacing.md, marginTop: spacing.lg }}>
         {RULES.map((r) => (
           <View key={r.icon} style={styles.ruleRow}>
@@ -39,27 +41,47 @@ function NoTeam() {
   );
 }
 
-export default function WarScreen() {
-  const insets = useSafeAreaInsets();
-  const { team, teamMembers, teamStandings, warDays, friendHistory, myId, profile, leaveTeam, reportTeam, mode, today } =
-    useAppStore();
+type Section = 'league' | 'teams';
 
-  const header = (
-    <>
-      <Text style={styles.screenTitle}>Guerre</Text>
+export default function CompetitionScreen() {
+  const insets = useSafeAreaInsets();
+  const { today } = useAppStore();
+  const [section, setSection] = useState<Section>('league');
+
+  return (
+    <ScrollView style={styles.screen} contentContainerStyle={[styles.container, { paddingTop: insets.top + spacing.md }]}>
+      <Text style={styles.screenTitle}>Compétition</Text>
       <Text style={styles.label}>Semaine {isoWeek(today)}</Text>
       <StatusBanner />
-    </>
+      <View style={styles.segment}>
+        {(
+          [
+            ['league', 'Ligue'],
+            ['teams', 'Équipes'],
+          ] as const
+        ).map(([key, title]) => (
+          <Pressable
+            key={key}
+            onPress={() => {
+              tap('selection');
+              setSection(key);
+            }}
+            style={[styles.segmentItem, section === key && styles.segmentOn]}
+          >
+            <Text style={[styles.segmentText, section === key && styles.segmentTextOn]}>{title}</Text>
+          </Pressable>
+        ))}
+      </View>
+      {section === 'league' ? <LeagueView /> : <TeamsSection />}
+    </ScrollView>
   );
+}
 
-  if (!team) {
-    return (
-      <ScrollView style={styles.screen} contentContainerStyle={[styles.container, { paddingTop: insets.top + spacing.md }]}>
-        {header}
-        <NoTeam />
-      </ScrollView>
-    );
-  }
+function TeamsSection() {
+  const { team, teamMembers, teamStandings, warDays, friendHistory, myId, profile, leaveTeam, reportTeam, mode } =
+    useAppStore();
+
+  if (!team) return <NoTeam />;
 
   const ranked = rankByScore(teamStandings);
   const mine = ranked.find((t) => t.id === team.id);
@@ -104,9 +126,7 @@ export default function WarScreen() {
   };
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={[styles.container, { paddingTop: insets.top + spacing.md }]}>
-      {header}
-
+    <>
       <Card style={styles.hero}>
         <View style={styles.heroTop}>
           <TeamBadge id={team.id} name={team.name} size={48} />
@@ -201,7 +221,7 @@ export default function WarScreen() {
       <View style={{ marginTop: spacing.lg }}>
         <Button title="Quitter l’équipe" variant="ghost" onPress={onLeave} />
       </View>
-    </ScrollView>
+    </>
   );
 }
 
@@ -211,6 +231,17 @@ const styles = StyleSheet.create({
   screenTitle: { color: colors.text, ...font.title, fontSize: 30 },
   label: { color: colors.textMuted, ...font.label },
   intro: { color: colors.text, ...font.body, fontSize: 17, lineHeight: 24, marginTop: spacing.md },
+  segment: {
+    flexDirection: 'row',
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    padding: 3,
+    marginTop: spacing.md,
+  },
+  segmentItem: { flex: 1, paddingVertical: 9, borderRadius: radius.sm, alignItems: 'center' },
+  segmentOn: { backgroundColor: colors.text },
+  segmentText: { color: colors.textMuted, fontWeight: '700', fontSize: 15 },
+  segmentTextOn: { color: colors.background },
   ruleRow: { flexDirection: 'row', gap: spacing.md, alignItems: 'center' },
   ruleText: { color: colors.text, ...font.body, flex: 1 },
   hero: { marginTop: spacing.md, gap: spacing.lg },

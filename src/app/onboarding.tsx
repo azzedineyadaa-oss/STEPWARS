@@ -10,13 +10,13 @@ import { useAppStore } from '@/state/AppStore';
 import { colors, font, formatSteps, radius, spacing } from '@/theme';
 
 const GOALS = [
-  { steps: 5000, label: 'Régulier', detail: 'Une marche quotidienne' },
-  { steps: 8000, label: 'Actif', detail: 'Recommandé pour commencer' },
-  { steps: 10000, label: 'Sportif', detail: 'Le classique des 10 000' },
+  { steps: 5000, label: 'En douceur', detail: 'Pour reprendre l’habitude de marcher' },
+  { steps: 8000, label: 'Actif', detail: 'Une bonne marche chaque jour' },
+  { steps: 10000, label: 'Les 10 000', detail: 'Le classique, recommandé' },
   { steps: 15000, label: 'Intense', detail: 'Pour les gros marcheurs' },
 ];
 const FEATURES: { icon: IconName; title: string; text: string }[] = [
-  { icon: 'shield-outline', title: 'Guerre d’équipes', text: 'Ton équipe contre toutes les autres, chaque semaine.' },
+  { icon: 'trophy-outline', title: 'Ligues', text: 'Chaque semaine, affronte des marcheurs de ton niveau et monte.' },
   { icon: 'flash-outline', title: 'Duels', text: 'Défie tes amis sur 1, 3 ou 7 jours.' },
   { icon: 'map-outline', title: 'Carte', text: 'Les marcheurs autour de toi, si tu le choisis.' },
 ];
@@ -147,7 +147,14 @@ export default function OnboardingScreen() {
                 );
               })}
             </View>
-            <Button title="Continuer" onPress={next} />
+            <Button
+              title="Continuer"
+              onPress={() => {
+                // Enregistre aussi l'objectif par défaut, sinon le serveur garderait le sien.
+                updateProfile({ dailyGoal: profile.dailyGoal });
+                next();
+              }}
+            />
           </View>
         )}
 

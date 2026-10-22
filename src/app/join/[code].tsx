@@ -41,11 +41,11 @@ export default function JoinTeamScreen() {
       {code && <Text style={styles.code}>{code}</Text>}
       <Text style={styles.lead}>
         {!code
-          ? 'Demande à ton équipe de te renvoyer le lien, ou entre le code dans l’onglet Guerre.'
+          ? 'Demande à ton équipe de te renvoyer le lien, ou entre le code dans l’onglet Ligue, puis Équipes.'
           : alreadyIn
             ? 'Tu fais déjà partie de cette équipe.'
             : team
-              ? `Tu es dans l’équipe « ${team.name} ». Quitte-la d’abord dans l’onglet Guerre pour en rejoindre une autre.`
+              ? `Tu es dans l’équipe « ${team.name} ». Quitte-la d’abord dans l’onglet Ligue pour en rejoindre une autre.`
               : 'Vos pas s’additionnent chaque semaine contre les autres équipes.'}
       </Text>
       {error && <Text style={styles.error}>{error}</Text>}

@@ -150,3 +150,20 @@ test('suppression de compte', async () => {
   assert.equal(error, null);
   await assert.rejects(api.fetchSnapshot(chloe, CHLOE, today), api.ApiError);
 });
+
+test('ligue : placement et classement de la semaine', async () => {
+  const league = await api.fetchLeague(bob, today);
+  assert.ok(league, "Bob est placé dans une ligue");
+  assert.ok(league.division >= 1 && league.division <= 5);
+  const me = league.entries.find((e) => e.isMe);
+  assert.ok(me, "Bob apparaît dans sa ligue");
+  assert.deepEqual(
+    league.entries.map((e) => e.position),
+    league.entries.map((_, i) => i + 1),
+    'les places se suivent',
+  );
+  // Rappeler ne change rien : même ligue, même semaine.
+  const again = await api.fetchLeague(bob, today);
+  assert.equal(again?.weekStart, league.weekStart);
+  assert.equal(again?.entries.length, league.entries.length);
+});

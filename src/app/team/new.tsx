@@ -77,7 +77,7 @@ export default function NewTeamScreen() {
           <Text style={styles.hint}>
             {appMode === 'demo'
               ? 'En mode démo, n’importe quel code fonctionne.'
-              : 'Demande le code à un membre de l’équipe (onglet Guerre).'}
+              : 'Demande le code à un membre de l’équipe (onglet Ligue, puis Équipes).'}
           </Text>
         </>
       )}
