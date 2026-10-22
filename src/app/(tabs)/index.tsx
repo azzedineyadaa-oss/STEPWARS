@@ -5,9 +5,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Celebration } from '@/components/Celebration';
 import { ProgressRing } from '@/components/ProgressRing';
-import { Avatar, Button, Card, SectionTitle, Stat, StatusBanner, TeamBadge } from '@/components/ui';
+import { Avatar, Button, Card, SectionTitle, Stat, StatusBanner, TeamBadge, type IconName } from '@/components/ui';
 import {
+  addDays,
   challengeDays,
+  computeStreak,
   evaluateChallenge,
   fromDayKey,
   isoWeek,
@@ -16,7 +18,8 @@ import {
   rankByScore,
   warTimeLeft,
 } from '@/lib/game';
-import { divisionName, leagueTarget, zoneFor } from '@/lib/league';
+import { newBadges } from '@/lib/badges';
+import { divisionName, leagueTarget, resultHeadline, zoneFor } from '@/lib/league';
 import { useAppStore } from '@/state/AppStore';
 import { colors, font, formatSteps, radius, spacing } from '@/theme';
 
@@ -35,6 +38,41 @@ function message(steps: number, goal: number) {
   if (steps >= goal) return `Objectif atteint. ${formatSteps(steps - goal)} pas de plus pour ton équipe.`;
   if (steps === 0) return 'Aucun pas pour l’instant aujourd’hui.';
   return `Encore ${formatSteps(goal - steps)} pas pour atteindre ton objectif.`;
+}
+
+/** Bilan de la semaine passée, le temps de le lire. */
+function RecapCard() {
+  const { weeklyRecap: recap, dismissRecap } = useAppStore();
+  if (!recap) return null;
+  const tint =
+    recap.nextDivision > recap.division ? colors.success : recap.nextDivision < recap.division ? colors.danger : colors.border;
+  return (
+    <Card style={[styles.recap, { borderColor: tint }]}>
+      <View style={styles.rowBetween}>
+        <Text style={styles.label}>Semaine {isoWeek(recap.weekStart)} terminée</Text>
+        <Pressable onPress={dismissRecap} hitSlop={12} accessibilityLabel="Fermer le bilan">
+          <Ionicons name="close" size={20} color={colors.textMuted} />
+        </Pressable>
+      </View>
+      <Text style={styles.recapTitle}>{resultHeadline(recap)}</Text>
+      <Text style={styles.cardMeta}>
+        {recap.position}
+        {recap.position === 1 ? 'er' : 'e'} sur {recap.members} · {formatSteps(recap.steps)} pas dans la semaine
+      </Text>
+      <View style={styles.cta}>
+        <Text
+          style={styles.ctaText}
+          onPress={() => {
+            dismissRecap();
+            router.navigate('/war');
+          }}
+        >
+          Voir ma nouvelle ligue
+        </Text>
+        <Ionicons name="arrow-forward" size={16} color={colors.primary} />
+      </View>
+    </Card>
+  );
 }
 
 function LeagueCard() {
@@ -234,6 +272,7 @@ export default function HomeScreen() {
     useAppStore();
   const goal = profile.dailyGoal;
   const done = todaySteps >= goal;
+  const freshBadges = newBadges(history, goal, streak.best, computeStreak(history, goal, addDays(today, -1)).best, today);
   const week = lastDays(today, 7);
   const weekMax = Math.max(goal, ...week.map((d) => history[d] ?? 0));
   const now = new Date();
@@ -279,6 +318,8 @@ export default function HomeScreen() {
             </Card>
           ))}
 
+        <RecapCard />
+
         <View style={styles.ringWrap}>
           <ProgressRing progress={todaySteps / goal} color={done ? colors.success : colors.primary}>
             <Text style={styles.label}>Aujourd’hui</Text>
@@ -291,7 +332,7 @@ export default function HomeScreen() {
         <Card style={styles.stats}>
           <Stat label="Série" value={`${streak.current}`} unit="j" tint={streak.current > 0 ? colors.primary : undefined} />
           <View style={styles.divider} />
-          <Stat label="Record" value={`${streak.best}`} unit="j" />
+          <Stat label="Meilleure" value={`${streak.best}`} unit="j" />
           <View style={styles.divider} />
           <Stat
             label="Distance"
@@ -299,6 +340,32 @@ export default function HomeScreen() {
             unit="km"
           />
         </Card>
+
+        {streak.current > 0 && (
+          <View style={styles.joker}>
+            <Ionicons name="shield-checkmark-outline" size={16} color={streak.jokerAvailable ? colors.success : colors.textMuted} />
+            <Text style={styles.jokerText}>
+              {streak.jokerAvailable
+                ? 'Joker de la semaine disponible : un jour raté ne cassera pas ta série.'
+                : 'Joker de la semaine utilisé : ne rate plus de jour avant lundi.'}
+            </Text>
+          </View>
+        )}
+
+        {freshBadges.length > 0 && (
+          <Pressable onPress={() => router.navigate('/profile')}>
+            <Card style={[styles.duelCard, styles.invitation, { marginTop: spacing.md }]}>
+              <View style={styles.leagueIcon}>
+                <Ionicons name={freshBadges[0].icon as IconName} size={20} color={colors.onPrimary} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.label}>Nouveau badge</Text>
+                <Text style={styles.duelName}>{freshBadges[0].title}</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+            </Card>
+          </Pressable>
+        )}
 
         <SectionTitle>Ma ligue</SectionTitle>
         <LeagueCard />
@@ -357,6 +424,10 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
+  recap: { borderWidth: 1, marginTop: spacing.md, gap: spacing.xs },
+  recapTitle: { color: colors.text, ...font.title, marginTop: spacing.xs },
+  joker: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.sm, paddingHorizontal: spacing.xs },
+  jokerText: { color: colors.textMuted, fontSize: 13, fontWeight: '600', flex: 1 },
   invitation: { borderColor: colors.primary, borderWidth: 1 },
   leagueIcon: {
     width: 40,

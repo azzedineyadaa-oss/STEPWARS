@@ -97,6 +97,22 @@ export function leagueTarget(league: League): LeagueTarget | null {
   return { kind: 'lead', steps: me.steps - entries[1].steps };
 }
 
+export type LeagueResult = {
+  weekStart: DayKey;
+  division: Division;
+  nextDivision: Division;
+  position: number;
+  members: number;
+  steps: number;
+};
+
+/** Phrase du bilan de la semaine. */
+export function resultHeadline(result: LeagueResult): string {
+  if (result.nextDivision > result.division) return `Tu montes en ${divisionName(result.nextDivision)} !`;
+  if (result.nextDivision < result.division) return `Tu redescends en ${divisionName(result.nextDivision)}`;
+  return `Tu restes en ${divisionName(result.division)}`;
+}
+
 // --- Démo ---------------------------------------------------------------------
 
 const DEMO_NAMES = [
@@ -131,4 +147,25 @@ export function demoLeague(
   });
   players.push({ id: me.id, name: me.name, steps: sumSteps(myHistory, days) });
   return { division, weekStart, entries: rankLeague(players, me.id) };
+}
+
+/** Bilan simulé de la semaine passée ; null si je n'ai pas marché cette semaine-là. */
+export function demoLeagueResult(
+  me: { id: string; name: string },
+  myHistory: Record<DayKey, number>,
+  thisWeekStart: DayKey,
+): LeagueResult | null {
+  const weekStart = addDays(thisWeekStart, -7);
+  const league = demoLeague(me, myHistory, addDays(weekStart, 6), weekStart, 1);
+  const mine = league.entries.find((e) => e.isMe);
+  if (!mine || mine.steps === 0) return null;
+  const members = league.entries.length;
+  return {
+    weekStart,
+    division: league.division,
+    nextDivision: nextDivision(league.division, mine.position, members),
+    position: mine.position,
+    members,
+    steps: mine.steps,
+  };
 }

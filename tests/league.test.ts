@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 
 import {
   demoLeague,
+  demoLeagueResult,
+  resultHeadline,
   divisionForAverage,
   divisionName,
   leagueTarget,
@@ -108,4 +110,16 @@ test('ligue de démo : 20 joueurs, mon niveau, déterministe', () => {
   assert.equal(a.entries.find((e) => e.isMe)?.steps, 15000);
   // Moyenne des 7 derniers jours : (10 500 + 11 000 + 9 000) / 7 ≈ 4 357 → Sentier.
   assert.equal(a.division, 1);
+});
+
+test('bilan de la semaine : phrase et démo', () => {
+  const base = { weekStart: '2026-10-12', position: 1, members: 20, steps: 80000 };
+  assert.equal(resultHeadline({ ...base, division: 2, nextDivision: 3 }), 'Tu montes en Route !');
+  assert.equal(resultHeadline({ ...base, division: 2, nextDivision: 1 }), 'Tu redescends en Sentier');
+  assert.equal(resultHeadline({ ...base, division: 5, nextDivision: 5 }), 'Tu restes en Sommet');
+  assert.equal(demoLeagueResult({ id: 'me', name: 'Moi' }, {}, '2026-10-19'), null);
+  const r = demoLeagueResult({ id: 'me', name: 'Moi' }, { '2026-10-13': 12000, '2026-10-14': 11000 }, '2026-10-19');
+  assert.equal(r?.weekStart, '2026-10-12');
+  assert.equal(r?.steps, 23000);
+  assert.equal(r?.members, 20);
 });

@@ -14,22 +14,68 @@ import {
 
 test('série : aujourd’hui atteint, compte jusqu’à aujourd’hui', () => {
   const h = { '2026-10-19': 9000, '2026-10-20': 8000, '2026-10-21': 8500 };
-  assert.deepEqual(computeStreak(h, 8000, '2026-10-21'), { current: 3, best: 3, todayDone: true });
+  assert.deepEqual(computeStreak(h, 8000, '2026-10-21'), {
+    current: 3,
+    best: 3,
+    todayDone: true,
+    jokerDays: [],
+    jokerAvailable: true,
+  });
 });
 
 test('série : aujourd’hui pas encore atteint, la série d’hier reste vivante', () => {
   const h = { '2026-10-19': 9000, '2026-10-20': 8000, '2026-10-21': 1200 };
-  assert.deepEqual(computeStreak(h, 8000, '2026-10-21'), { current: 2, best: 2, todayDone: false });
+  assert.deepEqual(computeStreak(h, 8000, '2026-10-21'), {
+    current: 2,
+    best: 2,
+    todayDone: false,
+    jokerDays: [],
+    jokerAvailable: true,
+  });
 });
 
 test('série : cassée hier, record conservé', () => {
   const h = { '2026-10-10': 9000, '2026-10-11': 9000, '2026-10-12': 9000, '2026-10-20': 100, '2026-10-21': 9000 };
-  assert.deepEqual(computeStreak(h, 8000, '2026-10-21'), { current: 1, best: 3, todayDone: true });
+  assert.deepEqual(computeStreak(h, 8000, '2026-10-21'), {
+    current: 1,
+    best: 3,
+    todayDone: true,
+    jokerDays: [],
+    jokerAvailable: true,
+  });
 });
 
-test('série : jours non consécutifs ne s’additionnent pas dans le record', () => {
-  const h = { '2026-10-01': 9000, '2026-10-03': 9000 };
+test('série : deux jours ratés d’affilée cassent le record', () => {
+  const h = { '2026-10-01': 9000, '2026-10-04': 9000 };
   assert.equal(computeStreak(h, 8000, '2026-10-21').best, 1);
+});
+
+test('joker : un jour raté dans la semaine ne casse pas la série', () => {
+  // Lundi 19 et mercredi 21 réussis, mardi 20 raté : joker de la semaine.
+  const h = { '2026-10-18': 9000, '2026-10-19': 9000, '2026-10-20': 300, '2026-10-21': 9000 };
+  const s = computeStreak(h, 8000, '2026-10-21');
+  assert.deepEqual([s.current, s.jokerDays, s.jokerAvailable], [3, ['2026-10-20'], false]);
+  assert.equal(s.best, 3);
+});
+
+test('joker : un seul par semaine', () => {
+  // Mardi 20 et jeudi 22 ratés la même semaine : le joker sauve jeudi, pas mardi.
+  const h = { '2026-10-19': 9000, '2026-10-21': 9000, '2026-10-23': 9000, '2026-10-24': 9000 };
+  const s = computeStreak(h, 8000, '2026-10-24');
+  assert.deepEqual([s.current, s.jokerDays], [3, ['2026-10-22']]);
+});
+
+test('joker : hier raté, la série reste vivante aujourd’hui', () => {
+  const h = { '2026-10-19': 9000, '2026-10-20': 9000, '2026-10-21': 0, '2026-10-22': 2000 };
+  const s = computeStreak(h, 8000, '2026-10-22');
+  assert.deepEqual([s.current, s.jokerDays, s.todayDone], [2, ['2026-10-21'], false]);
+});
+
+test('joker : d’une semaine à l’autre, chacune a le sien', () => {
+  // Dimanche 18 raté (semaine du 12), mardi 20 raté (semaine du 19).
+  const h = { '2026-10-17': 9000, '2026-10-19': 9000, '2026-10-21': 9000 };
+  const s = computeStreak(h, 8000, '2026-10-21');
+  assert.deepEqual([s.current, s.jokerDays], [3, ['2026-10-20', '2026-10-18']]);
 });
 
 test('la semaine de guerre va du lundi au dimanche', () => {

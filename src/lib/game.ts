@@ -141,29 +141,67 @@ export type Streak = {
   current: number;
   best: number;
   todayDone: boolean;
+  /** Jours ratés rattrapés par le joker dans la série en cours. */
+  jokerDays: DayKey[];
+  /** Le joker de cette semaine (lundi-dimanche) est encore disponible. */
+  jokerAvailable: boolean;
 };
 
 /**
- * La série reste vivante tant que la journée n'est pas finie : si l'objectif
- * n'est pas encore atteint aujourd'hui, on compte la série jusqu'à hier.
+ * Série de jours avec l'objectif atteint.
+ *
+ * - Elle reste vivante tant que la journée n'est pas finie : si l'objectif
+ *   n'est pas encore atteint aujourd'hui, on compte jusqu'à hier.
+ * - Joker : un jour raté par semaine (lundi-dimanche) ne casse pas la série,
+ *   s'il est entouré de jours réussis. Il ne compte pas comme un jour de série.
  */
 export function computeStreak(history: StepHistory, goal: number, today: DayKey): Streak {
   const done = (day: DayKey) => (history[day] ?? 0) >= goal;
   const todayDone = done(today);
+  const start = todayDone ? today : addDays(today, -1);
 
   let current = 0;
-  for (let day = todayDone ? today : addDays(today, -1); done(day); day = addDays(day, -1)) current++;
+  const jokerDays: DayKey[] = [];
+  const usedWeeks = new Set<DayKey>();
+  for (let day = start; ; day = addDays(day, -1)) {
+    if (done(day)) {
+      current++;
+      continue;
+    }
+    // Un jour raté est rattrapé si la veille est réussie, que la série continue
+    // après lui (ou qu'il s'agit d'hier) et que le joker de sa semaine est libre.
+    const week = weekStart(day);
+    if ((current > 0 || day === start) && done(addDays(day, -1)) && !usedWeeks.has(week)) {
+      usedWeeks.add(week);
+      jokerDays.push(day);
+      continue;
+    }
+    break;
+  }
 
+  // Record : même règle, appliquée à tout l'historique.
   let best = current;
+  const doneDays = Object.keys(history).filter(done).sort();
   let run = 0;
   let previous: DayKey | null = null;
-  for (const day of Object.keys(history).filter(done).sort()) {
-    run = previous !== null && addDays(previous, 1) === day ? run + 1 : 1;
+  const bestWeeks = new Set<DayKey>();
+  for (const day of doneDays) {
+    if (previous !== null && addDays(previous, 1) === day) run++;
+    else if (previous !== null && addDays(previous, 2) === day && !bestWeeks.has(weekStart(addDays(previous, 1)))) {
+      bestWeeks.add(weekStart(addDays(previous, 1)));
+      run++;
+    } else run = 1;
     best = Math.max(best, run);
     previous = day;
   }
 
-  return { current, best, todayDone };
+  return {
+    current,
+    best,
+    todayDone,
+    jokerDays,
+    jokerAvailable: current > 0 && !usedWeeks.has(weekStart(today)),
+  };
 }
 
 // --- Guerre d'équipes -------------------------------------------------------

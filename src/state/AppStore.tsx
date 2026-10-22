@@ -26,7 +26,7 @@ import {
   type TeamMember,
   type TeamStanding,
 } from '@/lib/game';
-import { demoLeague, type League } from '@/lib/league';
+import { demoLeague, demoLeagueResult, type League, type LeagueResult } from '@/lib/league';
 import { pendingUploads } from '@/lib/remote';
 import { supabase } from '@/lib/supabase';
 import { usePedometerSync, type PedometerState } from '@/hooks/usePedometerSync';
@@ -79,6 +79,10 @@ type PersistedState = {
   accountEmail: string | null;
   /** En ligne : ma ligue de la semaine, gardée pour l'affichage hors connexion. */
   league: League | null;
+  /** En ligne : bilan de ma ligue la semaine passée. */
+  lastWeekResult: LeagueResult | null;
+  /** Semaine dont le bilan a déjà été fermé. */
+  recapDismissedWeek: DayKey | null;
 };
 
 type AppStore = PersistedState & {
@@ -125,6 +129,9 @@ type AppStore = PersistedState & {
   retry: () => void;
   /** Ma ligue de la semaine (simulée en démo) ; null tant que le serveur ne m'a pas placé. */
   currentLeague: League | null;
+  /** Bilan de la semaine passée, à montrer jusqu'à ce qu'il soit fermé. */
+  weeklyRecap: LeagueResult | null;
+  dismissRecap: () => void;
   /** Historique de pas d'un autre joueur (ami ou coéquipier) ; simulé en mode démo. */
   friendHistory: (playerId: string, days: DayKey[]) => StepHistory;
 };
@@ -162,6 +169,8 @@ function initialState(): PersistedState {
     accountId: null,
     accountEmail: null,
     league: null,
+    lastWeekResult: null,
+    recapDismissedWeek: null,
   };
 }
 
@@ -334,10 +343,18 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     const stale = state.league === null || state.league.weekStart !== weekStart(today);
     if (!stale && Date.now() - leagueLoadedAt.current < LEAGUE_MIN_INTERVAL_MS) return;
     leagueLoadedAt.current = Date.now();
+    const db = supabase;
+    const previousWeek = addDays(weekStart(today), -7);
     api
-      .fetchLeague(supabase, today)
+      .fetchLeague(db, today)
       .then((league) => setState((s) => ({ ...s, league })))
       .catch((e) => console.warn('Ligue indisponible', e));
+    if (state.lastWeekResult?.weekStart !== previousWeek) {
+      api
+        .fetchLeagueResult(db, previousWeek)
+        .then((lastWeekResult) => setState((s) => ({ ...s, lastWeekResult })))
+        .catch((e) => console.warn('Bilan indisponible', e));
+    }
     // `state.league` exclu : le recharger ne doit pas relancer un appel.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId, stepsInSync, today, leagueTick]);
@@ -654,6 +671,18 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     [state.profile.name, state.league, history, today, dayProgress],
   );
 
+  const thisWeek = weekStart(today);
+  const weeklyRecap = useMemo(() => {
+    const result =
+      mode === 'demo' ? demoLeagueResult({ id: ME_ID, name: state.profile.name }, history, thisWeek) : state.lastWeekResult;
+    if (!result || result.weekStart !== addDays(thisWeek, -7) || state.recapDismissedWeek === result.weekStart) return null;
+    return result;
+  }, [state.profile.name, state.lastWeekResult, state.recapDismissedWeek, history, thisWeek]);
+
+  const dismissRecap = useCallback(() => {
+    setState((s) => ({ ...s, recapDismissedWeek: addDays(weekStart(toDayKey(new Date())), -7) }));
+  }, []);
+
   const value = useMemo<AppStore>(
     () => ({
       ...state,
@@ -690,6 +719,8 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       retry,
       friendHistory,
       currentLeague,
+      weeklyRecap,
+      dismissRecap,
     }),
     [
       state,
@@ -725,6 +756,8 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       retry,
       friendHistory,
       currentLeague,
+      weeklyRecap,
+      dismissRecap,
     ],
   );
 

@@ -1,6 +1,6 @@
 // Conversion entre les lignes Supabase et les types de l'app. Pur, testé avec `node --test`.
 import type { Challenge, DayKey, Friend, StepHistory, Team, TeamMember, TeamStanding } from './game.ts';
-import type { Division, League } from './league.ts';
+import type { Division, League, LeagueResult } from './league.ts';
 import type { MapPlayer, PlayerCard } from './players.ts';
 
 export type ProfileRow = {
@@ -46,6 +46,27 @@ export function leagueFromRows(rows: LeagueRow[]): League | null {
     entries: [...rows]
       .sort((a, b) => a.league_position - b.league_position)
       .map((r) => ({ id: r.user_id, name: r.name, steps: Number(r.steps), position: r.league_position, isMe: r.is_me })),
+  };
+}
+
+export type LeagueResultRow = {
+  week_start: DayKey;
+  division: number;
+  next_division: number;
+  league_position: number;
+  members: number;
+  steps: number | string;
+};
+
+export function leagueResultFromRow(row: LeagueResultRow): LeagueResult {
+  const level = (n: number) => Math.min(5, Math.max(1, n)) as Division;
+  return {
+    weekStart: row.week_start,
+    division: level(row.division),
+    nextDivision: level(row.next_division),
+    position: row.league_position,
+    members: row.members,
+    steps: Number(row.steps),
   };
 }
 

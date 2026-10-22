@@ -99,3 +99,18 @@ select pg_temp.check(public.league_next_division(2, 1, 3) = 2, 'moins de 4 joueu
 select pg_temp.act_as(null);
 select pg_temp.expect_error($$select * from public.my_league(current_date)$$, 'permission denied');
 reset role;
+
+-- Bilan de la semaine passée.
+select pg_temp.act_as(pg_temp.uid(33));
+select pg_temp.check(
+  (select division = 3 and next_division = 4 and league_position = 1 and members = 8 and steps = 8000
+   from public.my_league_result(pg_temp.week() - 7)),
+  'bilan : 1er sur 8, monte au niveau 4'
+);
+select pg_temp.act_as(pg_temp.uid(40));
+select pg_temp.check(
+  (select next_division = 2 and league_position = 8 from public.my_league_result(pg_temp.week() - 3)),
+  'bilan : n’importe quel jour de la semaine désigne la semaine'
+);
+select pg_temp.check((select count(*) = 0 from public.my_league_result(pg_temp.week() - 14)), 'bilan : rien si on ne jouait pas');
+reset role;

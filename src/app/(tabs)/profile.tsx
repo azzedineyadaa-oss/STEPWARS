@@ -4,7 +4,8 @@ import { useState } from 'react';
 import { Alert, Pressable, ScrollView, Share, StyleSheet, Text, TextInput, View } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 
-import { Avatar, Button, Card, Chip, SectionTitle, StatusBanner } from '@/components/ui';
+import { Avatar, Button, Card, Chip, SectionTitle, StatusBanner, type IconName } from '@/components/ui';
+import { computeBadges } from '@/lib/badges';
 import { friendInviteMessage, friendInviteUrl } from '@/lib/invite';
 import { requestReminderPermission } from '@/lib/reminders';
 import { useAppStore } from '@/state/AppStore';
@@ -30,7 +31,11 @@ export default function ProfileScreen() {
     deleteAccount,
     settings,
     setReminderHour,
+    history,
+    streak,
   } = useAppStore();
+  const badges = computeBadges(history, profile.dailyGoal, streak.best);
+  const earned = badges.filter((b) => b.earned).length;
   const [friendInput, setFriendInput] = useState('');
   const [showQr, setShowQr] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -128,6 +133,31 @@ export default function ProfileScreen() {
           </Card>
         </Pressable>
       )}
+
+      <SectionTitle>
+        Badges · {earned}/{badges.length}
+      </SectionTitle>
+      <View style={styles.badges}>
+        {badges.map((b) => (
+          <View key={b.id} style={styles.badge}>
+            <View style={[styles.badgeIcon, b.earned && styles.badgeIconOn]}>
+              <Ionicons
+                name={b.icon as IconName}
+                size={22}
+                color={b.earned ? colors.onPrimary : colors.textFaint}
+              />
+            </View>
+            <Text style={[styles.badgeTitle, !b.earned && { color: colors.textMuted }]} numberOfLines={2}>
+              {b.title}
+            </Text>
+            {!b.earned && (
+              <View style={styles.badgeTrack}>
+                <View style={[styles.badgeBar, { width: `${Math.round(b.progress * 100)}%` }]} />
+              </View>
+            )}
+          </View>
+        ))}
+      </View>
 
       <SectionTitle>Pseudo</SectionTitle>
       <TextInput
@@ -250,6 +280,27 @@ const styles = StyleSheet.create({
   headerName: { color: colors.text, ...font.title },
   headerMeta: { color: colors.textMuted, fontWeight: '600', marginTop: 2 },
   label: { color: colors.textMuted, ...font.label },
+  badges: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  badge: {
+    width: '31.5%',
+    alignItems: 'center',
+    gap: 6,
+    padding: spacing.sm,
+    borderRadius: radius.md,
+    backgroundColor: colors.surface,
+  },
+  badgeIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surfaceAlt,
+  },
+  badgeIconOn: { backgroundColor: colors.primary },
+  badgeTitle: { color: colors.text, fontSize: 12, fontWeight: '700', textAlign: 'center' },
+  badgeTrack: { alignSelf: 'stretch', height: 3, borderRadius: 2, backgroundColor: colors.surfaceAlt, overflow: 'hidden' },
+  badgeBar: { height: 3, backgroundColor: colors.textMuted },
   inviteRow: { flexDirection: 'row', gap: spacing.sm },
   qr: { alignSelf: 'center', padding: spacing.md, backgroundColor: '#FFFFFF', borderRadius: radius.lg },
   backup: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginTop: spacing.md, borderColor: colors.primary, borderWidth: 1 },

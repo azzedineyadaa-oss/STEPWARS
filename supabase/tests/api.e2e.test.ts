@@ -171,4 +171,8 @@ test('ligue : placement et classement de la semaine', async () => {
   const again = await api.fetchLeague(bob, today);
   assert.equal(again?.weekStart, league.weekStart);
   assert.equal(again?.entries.length, league.entries.length);
+  // Bilan : rien la semaine passée (Bob ne jouait pas encore), sa place cette semaine.
+  assert.equal(await api.fetchLeagueResult(bob, addDays(today, -7)), null);
+  const result = await api.fetchLeagueResult(bob, today);
+  assert.equal(result?.position, me.position);
 });
