@@ -90,8 +90,8 @@ Résultat : un fichier `.ipa` (iOS) et un fichier `.aab` (Android).
 3. **TestFlight** : le build y apparaît après 10 à 30 minutes de traitement. Ajoutez des testeurs internes (jusqu'à 100) ou externes (jusqu'à 10 000, après une courte revue).
 4. Remplissez la fiche de l'app :
    - description, mots-clés, captures d'écran, URL de support, URL de confidentialité ;
-   - **Confidentialité de l'app** : déclarez « Forme physique » (nombre de pas), « Localisation approximative » (la zone d'environ 200 m envoyée pour la carte, seulement si le joueur choisit d'être visible, jamais la position précise) et « Identifiants : identifiant utilisateur » (le compte anonyme), **liés à l'utilisateur**, utilisés pour les « fonctionnalités de l'app » et non pour le pistage ;
-   - classification par âge : questionnaire, normalement 4+ ;
+   - **Confidentialité de l'app** : déclarez « Forme physique » (nombre de pas), « Localisation approximative » (la zone d'environ 200 m envoyée pour la carte, seulement si le joueur choisit d'être visible, jamais la position précise) « Identifiants : identifiant utilisateur » (le compte) et « Coordonnées : adresse e-mail » (facultative, pour retrouver son compte), **liés à l'utilisateur**, utilisés pour les « fonctionnalités de l'app » et non pour le pistage. Le pseudo et les pas sont visibles par d'autres joueurs (amis, ligue, carte selon la visibilité choisie) ;
+   - classification par âge : répondez au questionnaire honnêtement ; les interactions entre joueurs (pseudos, carte, signalements) font en général monter la classification au-dessus de 4+ ;
    - chiffrement : déjà déclaré dans `app.json` (`ITSAppUsesNonExemptEncryption: false`).
 5. Cliquez sur **Soumettre pour vérification**. La revue prend en général de 24 à 48 h.
 
@@ -136,8 +136,8 @@ Résultat : un fichier `.ipa` (iOS) et un fichier `.aab` (Android).
 
 - [ ] Identifiant `com.stepwars.app` remplacé par le vôtre dans `app.json`
 - [ ] Icône, écran de démarrage et icône adaptative Android définitifs dans `assets/`
-- [ ] Serveur Supabase configuré et variables EAS déclarées (`docs/BACKEND.md`)
-- [ ] Politique de confidentialité en ligne (pas collectés, hébergés chez Supabase, visibles par les seuls amis, pas de revente, suppression depuis l'app)
+- [ ] Serveur Supabase à jour (toutes les migrations, `docs/BACKEND.md`), modèles d'e-mail avec le code, service d'envoi d'e-mails branché
+- [ ] Politique de confidentialité complétée et en ligne : brouillon dans `docs/CONFIDENTIALITE.md`
 - [ ] Captures d'écran prises sur de vrais téléphones
 - [ ] Test sur au moins un iPhone et un téléphone Android
 - [ ] (Android, compte personnel) test fermé de 12 testeurs pendant 14 jours terminé
