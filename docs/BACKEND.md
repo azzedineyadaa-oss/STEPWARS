@@ -29,7 +29,7 @@ Le schéma est dans `supabase/migrations/` : `20261021000000_init.sql` (profils,
 
 ### 2. Créer les tables
 
-**Option simple :** ouvrez **SQL Editor**, puis **New query**. Collez le contenu de `supabase/migrations/20261021000000_init.sql` et cliquez sur **Run**, puis faites de même avec `20261022000000_teams.sql`, puis `20261023000000_map.sql`, puis `20261024000000_players_map.sql`, puis `20261025000000_anticheat.sql`. L'ordre compte.
+**Option simple :** ouvrez **SQL Editor**, puis **New query**. Collez tout le contenu de `supabase/setup.sql` et cliquez sur **Run**. Ce fichier rassemble toutes les migrations dans l'ordre ; il est régénéré par `scripts/bundle-sql.sh` et `npm run test:db` vérifie qu'il est à jour.
 
 **Option CLI :** elle est préférable pour les futures migrations.
 
