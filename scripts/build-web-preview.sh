@@ -23,7 +23,7 @@ node -e '
 
 # Sans clés Supabase : l'aperçu reste en mode démo.
 rm -rf "$OUT"
-env -u EXPO_PUBLIC_SUPABASE_URL -u EXPO_PUBLIC_SUPABASE_KEY CI=1 npx expo export --platform web --output-dir "$OUT" >/dev/null
+env -u EXPO_PUBLIC_SUPABASE_URL -u EXPO_PUBLIC_SUPABASE_KEY EXPO_NO_DOTENV=1 CI=1 npx expo export --platform web --output-dir "$OUT" >/dev/null
 
 # Les noms commençant par « _ » sont réservés par certains hébergeurs.
 mv "$OUT/_expo" "$OUT/app-bundle"

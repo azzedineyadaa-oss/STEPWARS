@@ -48,7 +48,7 @@ Docs: https://docs.expo.dev/eas/index.md
 - Map privacy is a product rule, enforced in `supabase/migrations/20261024000000_players_map.sql` and tested in `supabase/tests/visibility_test.sql`: visibility is opt-in (ghost by default), only hex cells leave the phone, strangers see each other only when both are public, within ~2 km, rounded to ~600 m, with block and report. Do not weaken these without the owner's explicit decision.
 - `react-native-maps` has no web build: map UI goes through `src/components/PlayersMap.tsx` with its `.web.tsx` fallback.
 - The backend is Supabase (`docs/BACKEND.md`). Any schema change goes in a new file under `supabase/migrations/` and must keep `npm run test:db` and `npm run test:api` (end-to-end test of `src/lib/api.ts` through PostgREST) passing; add scenarios to `supabase/tests/*_test.sql` (shared helpers in `helpers.sql`) for new rules.
-- Without `EXPO_PUBLIC_SUPABASE_URL`/`EXPO_PUBLIC_SUPABASE_KEY` the app runs in demo mode; keep both modes working.
+- `.env` (committed) holds the production `EXPO_PUBLIC_SUPABASE_URL`/`EXPO_PUBLIC_SUPABASE_KEY`, which are public by design; never put a secret key there. Without them (e.g. empty values in `.env.local`) the app runs in demo mode; keep both modes working. After `supabase/migrations` changes, run `scripts/bundle-sql.sh` and commit `supabase/setup.sql`.
 - The app talks to the player with « tu » (the team is « vous »). Keep new copy consistent.
 - The project stays on the SDK that Expo Go on the App Store supports (SDK 57 as of October 2026), so the owner can test on an iPhone. Upgrade only once Expo Go supports the new SDK.
 - Store publishing steps are in `docs/PUBLICATION.md`.

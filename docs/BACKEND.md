@@ -43,19 +43,7 @@ npx supabase db push
 
 Dans **Project Settings**, puis **API Keys**, copiez l'URL du projet et la clé **publishable**. Si votre projet n'affiche que les anciennes clés, prenez la clé `anon`.
 
-**En développement :**
-
-```bash
-cp .env.example .env.local   # puis collez les deux valeurs
-npm start
-```
-
-**Pour les builds EAS :** `.env.local` n'est pas envoyé dans le cloud, il faut donc déclarer les variables sur EAS.
-
-```bash
-npx eas-cli@latest env:create --name EXPO_PUBLIC_SUPABASE_URL --value https://xxxx.supabase.co --visibility plaintext --environment production --environment preview --environment development
-npx eas-cli@latest env:create --name EXPO_PUBLIC_SUPABASE_KEY --value sb_publishable_xxxx --visibility plaintext --environment production --environment preview --environment development
-```
+Les deux valeurs du projet de production sont dans `.env`, versionné : elles sont publiques et EAS l'envoie avec le projet. Pour un autre projet Supabase, ou pour revenir au mode démo, créez un `.env.local` (ignoré par git), qui a priorité : copiez `.env.example` et remplacez les valeurs, ou laissez-les vides pour le mode démo. Après un changement de ces valeurs, lancez une fois `npx expo start --clear`, sinon Metro peut garder les anciennes en cache.
 
 Ces deux valeurs sont **publiques** : elles se retrouvent dans l'app installée, et c'est prévu ainsi. La sécurité repose sur les règles de la base. Ne mettez **jamais** la clé `secret` ou `service_role` dans l'app.
 

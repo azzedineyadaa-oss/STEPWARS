@@ -19,7 +19,7 @@ Construite avec **Expo SDK 57 / React Native**. Un seul code TypeScript pour l'A
 
 Le serveur est **Supabase** : comptes anonymes, amis par code, pas partagés et défis entre amis. Mise en place dans **[docs/BACKEND.md](docs/BACKEND.md)**.
 
-> **Mode démo :** tant que le fichier `.env.local` ne contient pas les clés Supabase, l'app fonctionne sans serveur. Vos pas sont réels, mais les amis et leurs pas sont simulés localement.
+> **Serveur :** l'app est branchée sur le projet Supabase de production via `.env`. Pour le **mode démo**, créez un `.env.local` avec les deux variables vides : l'app fonctionne alors sans serveur. Vos pas sont réels, mais les amis et leurs pas sont simulés localement.
 
 ## Essayer l'app
 
