@@ -1,25 +1,29 @@
-import { LinearGradient } from 'expo-linear-gradient';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Button, Chip } from '@/components/ui';
+import { Avatar, Button, tap, type IconName } from '@/components/ui';
 import { requestReminderPermission } from '@/lib/reminders';
 import { useAppStore } from '@/state/AppStore';
 import { colors, font, formatSteps, radius, spacing } from '@/theme';
 
-const AVATARS = ['🏃', '🚶', '🧗', '🚴', '🦸', '🐆', '🦊', '🐺'];
 const GOALS = [
-  { steps: 5000, label: 'Tranquille', icon: '🌱' },
-  { steps: 8000, label: 'Actif', icon: '⚡' },
-  { steps: 10000, label: 'Guerrier', icon: '⚔️' },
-  { steps: 15000, label: 'Légende', icon: '👑' },
+  { steps: 5000, label: 'Régulier', detail: 'Une marche quotidienne' },
+  { steps: 8000, label: 'Actif', detail: 'Recommandé pour commencer' },
+  { steps: 10000, label: 'Sportif', detail: 'Le classique des 10 000' },
+  { steps: 15000, label: 'Intense', detail: 'Pour les gros marcheurs' },
+];
+const FEATURES: { icon: IconName; title: string; text: string }[] = [
+  { icon: 'shield-outline', title: 'Guerre d’équipes', text: 'Ton équipe contre toutes les autres, chaque semaine.' },
+  { icon: 'flash-outline', title: 'Duels', text: 'Défie tes amis sur 1, 3 ou 7 jours.' },
+  { icon: 'map-outline', title: 'Carte', text: 'Les marcheurs autour de toi, si tu le choisis.' },
 ];
 const STEPS = 4;
 
 export default function OnboardingScreen() {
   const insets = useSafeAreaInsets();
-  const { profile, updateProfile, completeOnboarding, setReminderHour } = useAppStore();
+  const { profile, myId, updateProfile, completeOnboarding, setReminderHour } = useAppStore();
   const [step, setStep] = useState(0);
   const [name, setName] = useState(profile.name === 'Moi' ? '' : profile.name);
 
@@ -42,146 +46,167 @@ export default function OnboardingScreen() {
   };
 
   return (
-    <LinearGradient colors={['#1B1240', colors.background]} style={styles.screen}>
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <ScrollView
-          contentContainerStyle={[styles.container, { paddingTop: insets.top + spacing.lg, paddingBottom: insets.bottom + spacing.lg }]}
-          keyboardShouldPersistTaps="handled"
-        >
-          <View style={styles.dots}>
-            {Array.from({ length: STEPS }, (_, i) => (
-              <View key={i} style={[styles.dot, i === step && styles.dotActive, i < step && styles.dotDone]} />
-            ))}
-          </View>
+    <KeyboardAvoidingView style={styles.screen} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <ScrollView
+        contentContainerStyle={[styles.container, { paddingTop: insets.top + spacing.lg, paddingBottom: insets.bottom + spacing.lg }]}
+        keyboardShouldPersistTaps="handled"
+      >
+        <View style={styles.progress}>
+          {Array.from({ length: STEPS }, (_, i) => (
+            <View key={i} style={[styles.progressBar, i <= step && styles.progressOn]} />
+          ))}
+        </View>
 
-          {step === 0 && (
-            <View style={styles.page}>
-              <Text style={styles.logo}>⚡</Text>
+        {step === 0 && (
+          <View style={styles.page}>
+            <View style={{ gap: spacing.md }}>
+              <View style={styles.logo}>
+                <Ionicons name="flash" size={34} color={colors.onPrimary} />
+              </View>
               <Text style={styles.brand}>StepWars</Text>
-              <Text style={styles.tagline}>Chaque pas est une attaque.</Text>
-              <View style={styles.features}>
-                {[
-                  ['⚔️', 'Guerre d’équipes', 'Ton équipe contre toutes les autres, chaque semaine.'],
-                  ['⚡', 'Duels', 'Défie tes amis sur 1, 3 ou 7 jours.'],
-                  ['🔥', 'Séries', 'Atteins ton objectif chaque jour et fais grandir ta flamme.'],
-                ].map(([icon, title, text]) => (
-                  <View key={title} style={styles.feature}>
-                    <Text style={styles.featureIcon}>{icon}</Text>
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.featureTitle}>{title}</Text>
-                      <Text style={styles.featureText}>{text}</Text>
-                    </View>
-                  </View>
-                ))}
-              </View>
-              <View style={styles.full}>
-                <Button title="C’est parti" onPress={next} />
-              </View>
+              <Text style={styles.lead}>Chaque pas compte. Pour toi, pour ton équipe, contre les autres.</Text>
             </View>
-          )}
+            <View style={{ gap: spacing.lg }}>
+              {FEATURES.map((f) => (
+                <View key={f.title} style={styles.feature}>
+                  <Ionicons name={f.icon} size={22} color={colors.primary} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.featureTitle}>{f.title}</Text>
+                    <Text style={styles.featureText}>{f.text}</Text>
+                  </View>
+                </View>
+              ))}
+            </View>
+            <Button title="Commencer" onPress={next} />
+          </View>
+        )}
 
-          {step === 1 && (
-            <View style={styles.page}>
-              <Text style={styles.big}>{profile.avatar}</Text>
-              <Text style={styles.title}>Qui es-tu, soldat ?</Text>
+        {step === 1 && (
+          <View style={styles.page}>
+            <View style={{ gap: spacing.md }}>
+              <Text style={styles.label}>Étape 1 sur 3</Text>
+              <Text style={styles.title}>Ton pseudo</Text>
+              <Text style={styles.lead}>C’est le nom que verront tes amis et les autres joueurs.</Text>
+            </View>
+            <View style={styles.nameRow}>
+              <Avatar id={myId} name={name || '?'} size={52} />
               <TextInput
                 style={styles.input}
                 value={name}
                 onChangeText={setName}
-                placeholder="Ton pseudo"
-                placeholderTextColor={colors.textMuted}
+                placeholder="Pseudo"
+                placeholderTextColor={colors.textFaint}
                 maxLength={20}
                 autoFocus
-                onSubmitEditing={saveName}
+                onSubmitEditing={() => name.trim() && saveName()}
                 returnKeyType="next"
               />
-              <View style={styles.wrap}>
-                {AVATARS.map((a) => (
-                  <Chip key={a} label={a} selected={profile.avatar === a} onPress={() => updateProfile({ avatar: a })} />
-                ))}
-              </View>
-              <View style={styles.full}>
-                <Button title="Suivant" onPress={saveName} disabled={!name.trim()} />
-              </View>
             </View>
-          )}
+            <Button title="Continuer" onPress={saveName} disabled={!name.trim()} />
+          </View>
+        )}
 
-          {step === 2 && (
-            <View style={styles.page}>
-              <Text style={styles.big}>🎯</Text>
+        {step === 2 && (
+          <View style={styles.page}>
+            <View style={{ gap: spacing.md }}>
+              <Text style={styles.label}>Étape 2 sur 3</Text>
               <Text style={styles.title}>Ton objectif quotidien</Text>
-              <Text style={styles.subtitle}>Tu pourras le changer à tout moment.</Text>
-              <View style={{ gap: spacing.sm, alignSelf: 'stretch' }}>
-                {GOALS.map((g) => {
-                  const selected = profile.dailyGoal === g.steps;
-                  return (
-                    <Chip
-                      key={g.steps}
-                      label={`${g.icon}  ${g.label} · ${formatSteps(g.steps)} pas`}
-                      selected={selected}
-                      onPress={() => updateProfile({ dailyGoal: g.steps })}
+              <Text style={styles.lead}>Tu pourras le changer à tout moment dans ton profil.</Text>
+            </View>
+            <View style={{ gap: spacing.sm }}>
+              {GOALS.map((g) => {
+                const selected = profile.dailyGoal === g.steps;
+                return (
+                  <Pressable
+                    key={g.steps}
+                    onPress={() => {
+                      tap('selection');
+                      updateProfile({ dailyGoal: g.steps });
+                    }}
+                    style={[styles.goal, selected && styles.goalOn]}
+                  >
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.goalLabel}>{g.label}</Text>
+                      <Text style={styles.goalDetail}>{g.detail}</Text>
+                    </View>
+                    <Text style={styles.goalSteps}>{formatSteps(g.steps)}</Text>
+                    <Ionicons
+                      name={selected ? 'checkmark-circle' : 'ellipse-outline'}
+                      size={22}
+                      color={selected ? colors.primary : colors.textFaint}
                     />
-                  );
-                })}
-              </View>
-              <View style={styles.full}>
-                <Button title="Suivant" onPress={next} />
-              </View>
+                  </Pressable>
+                );
+              })}
             </View>
-          )}
+            <Button title="Continuer" onPress={next} />
+          </View>
+        )}
 
-          {step === 3 && (
-            <View style={styles.page}>
-              <Text style={styles.big}>🔔</Text>
-              <Text style={styles.title}>Ne laisse jamais ta flamme s’éteindre</Text>
-              <Text style={styles.subtitle}>
-                Un petit rappel chaque soir à 19 h pour garder ta série en vie. Ensuite, StepWars te demandera
-                l’accès au podomètre pour compter tes pas.
+        {step === 3 && (
+          <View style={styles.page}>
+            <View style={{ gap: spacing.md }}>
+              <Text style={styles.label}>Étape 3 sur 3</Text>
+              <Text style={styles.title}>Un rappel le soir</Text>
+              <Text style={styles.lead}>
+                Une notification à 19 h pour ne pas casser ta série. Ensuite, StepWars te demandera l’accès au
+                podomètre pour compter tes pas.
               </Text>
-              <View style={{ gap: spacing.sm, alignSelf: 'stretch' }}>
-                <Button title="Activer les rappels" onPress={() => finish(true)} />
-                <Button title="Plus tard" variant="ghost" onPress={() => finish(false)} />
-              </View>
             </View>
-          )}
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </LinearGradient>
+            <View style={{ gap: spacing.sm }}>
+              <Button title="Activer le rappel" icon="notifications-outline" onPress={() => finish(true)} />
+              <Button title="Plus tard" variant="ghost" onPress={() => finish(false)} />
+            </View>
+          </View>
+        )}
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1 },
+  screen: { flex: 1, backgroundColor: colors.background },
   container: { flexGrow: 1, paddingHorizontal: spacing.lg },
-  dots: { flexDirection: 'row', gap: 6, justifyContent: 'center', marginBottom: spacing.xl },
-  dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.surfaceAlt },
-  dotActive: { width: 28, backgroundColor: colors.primary },
-  dotDone: { backgroundColor: colors.secondary },
-  page: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing.lg },
-  logo: { fontSize: 88 },
-  brand: { color: colors.text, fontSize: 44, fontWeight: '900', letterSpacing: -1.5, marginTop: -spacing.md },
-  tagline: { color: colors.primary, fontSize: 18, fontWeight: '800', marginTop: -spacing.md },
-  features: { alignSelf: 'stretch', gap: spacing.md, backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: radius.lg, padding: spacing.md },
-  feature: { flexDirection: 'row', gap: spacing.md, alignItems: 'center' },
-  featureIcon: { fontSize: 30 },
-  featureTitle: { color: colors.text, ...font.heading },
-  featureText: { color: colors.textMuted, fontWeight: '600', marginTop: 2 },
-  big: { fontSize: 72 },
-  title: { color: colors.text, ...font.title, textAlign: 'center' },
-  subtitle: { color: colors.textMuted, ...font.body, textAlign: 'center', marginTop: -spacing.sm },
-  input: {
-    alignSelf: 'stretch',
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderWidth: 1,
-    borderRadius: radius.md,
-    color: colors.text,
-    paddingHorizontal: spacing.md,
-    paddingVertical: 16,
-    fontSize: 20,
-    fontWeight: '700',
-    textAlign: 'center',
+  progress: { flexDirection: 'row', gap: 6, marginBottom: spacing.xl },
+  progressBar: { flex: 1, height: 3, borderRadius: 2, backgroundColor: colors.surfaceAlt },
+  progressOn: { backgroundColor: colors.primary },
+  page: { flex: 1, justifyContent: 'space-between', gap: spacing.xl },
+  logo: {
+    width: 64,
+    height: 64,
+    borderRadius: radius.lg,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  wrap: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, justifyContent: 'center' },
-  full: { alignSelf: 'stretch' },
+  brand: { color: colors.text, fontSize: 44, fontWeight: '900', letterSpacing: -1.8 },
+  label: { color: colors.primary, ...font.label },
+  title: { color: colors.text, ...font.title, fontSize: 32, letterSpacing: -1 },
+  lead: { color: colors.textMuted, ...font.body, fontSize: 17, lineHeight: 24 },
+  feature: { flexDirection: 'row', gap: spacing.md, alignItems: 'flex-start' },
+  featureTitle: { color: colors.text, ...font.heading },
+  featureText: { color: colors.textMuted, ...font.body, marginTop: 2 },
+  nameRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  input: {
+    flex: 1,
+    color: colors.text,
+    fontSize: 24,
+    fontWeight: '700',
+    borderBottomWidth: 2,
+    borderBottomColor: colors.primary,
+    paddingVertical: spacing.sm,
+  },
+  goal: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    padding: spacing.md,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  goalOn: { borderColor: colors.primary, backgroundColor: colors.surface },
+  goalLabel: { color: colors.text, ...font.heading },
+  goalDetail: { color: colors.textMuted, fontSize: 13, fontWeight: '500', marginTop: 2 },
+  goalSteps: { color: colors.text, fontSize: 17, fontWeight: '800', fontVariant: ['tabular-nums'] },
 });

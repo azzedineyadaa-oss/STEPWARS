@@ -2,12 +2,11 @@ import { Link, router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { Button, Card, Chip, SectionTitle, StatusBanner } from '@/components/ui';
+import { Avatar, Button, Card, Chip, SectionTitle, StatusBanner } from '@/components/ui';
 import { ME_ID, buildLeaderboard, challengeDays, evaluateChallenge, lastDays, type Challenge } from '@/lib/game';
 import { useAppStore } from '@/state/AppStore';
 import { colors, font, formatSteps, spacing } from '@/theme';
 
-const MEDALS = ['🥇', '🥈', '🥉'];
 const PERIODS = [
   { label: 'Aujourd’hui', days: 1 },
   { label: '7 jours', days: 7 },
@@ -21,30 +20,31 @@ function ChallengeRow({ challenge }: { challenge: Challenge }) {
   const total = result.myTotal + result.opponentTotal;
   const myShare = total === 0 ? 0.5 : result.myTotal / total;
 
-  let headline = `Jour ${result.daysElapsed}/${challenge.days}`;
+  let status = `Jour ${result.daysElapsed}/${challenge.days}`;
   let tint: string = result.myTotal >= result.opponentTotal ? colors.success : colors.danger;
-  if (result.winner === 'me') [headline, tint] = ['Victoire 🏆', colors.gold];
-  if (result.winner === 'opponent') [headline, tint] = ['Défaite', colors.textMuted];
-  if (result.winner === 'tie') [headline, tint] = ['Égalité', colors.textMuted];
+  if (result.winner === 'me') [status, tint] = ['Victoire', colors.success];
+  if (result.winner === 'opponent') [status, tint] = ['Défaite', colors.danger];
+  if (result.winner === 'tie') [status, tint] = ['Égalité', colors.textMuted];
 
   return (
     <Link href={{ pathname: '/challenge/[id]', params: { id: challenge.id } }} asChild>
       <Pressable>
-        <Card style={{ gap: spacing.sm }}>
+        <Card style={{ gap: spacing.md }}>
           <View style={styles.row}>
-            <Text style={styles.avatar}>{opponent?.avatar ?? '❔'}</Text>
+            <Avatar id={challenge.opponentId} name={opponent?.name ?? '?'} />
             <View style={{ flex: 1 }}>
-              <Text style={styles.title}>Contre {opponent?.name ?? 'ami supprimé'}</Text>
-              <Text style={styles.subtitle}>
-                {formatSteps(result.myTotal)} – {formatSteps(result.opponentTotal)} pas
-              </Text>
+              <Text style={styles.title}>{opponent?.name ?? 'Ami supprimé'}</Text>
+              <Text style={[styles.status, { color: tint }]}>{status}</Text>
             </View>
-            <Text style={[styles.status, { color: tint }]}>{headline}</Text>
+            <Text style={styles.score}>
+              {formatSteps(result.myTotal)}
+              <Text style={styles.scoreThem}> – {formatSteps(result.opponentTotal)}</Text>
+            </Text>
           </View>
           {result.status !== 'finished' && (
             <View style={styles.bar}>
               <View style={{ flex: myShare, backgroundColor: colors.primary }} />
-              <View style={{ flex: 1 - myShare, backgroundColor: colors.secondary }} />
+              <View style={{ flex: 1 - myShare, backgroundColor: colors.surfaceAlt }} />
             </View>
           )}
         </Card>
@@ -73,19 +73,22 @@ function FriendsLeaderboard() {
           <Chip key={p.days} label={p.label} selected={periodDays === p.days} onPress={() => setPeriodDays(p.days)} />
         ))}
       </View>
-      <Card style={{ gap: spacing.md }}>
-        {board.map((entry) => (
-          <View key={entry.id} style={styles.row}>
-            <Text style={styles.rank}>{MEDALS[entry.rank - 1] ?? `${entry.rank}`}</Text>
-            <Text style={styles.boardAvatar}>{entry.avatar}</Text>
+      <Card style={{ paddingVertical: spacing.xs }}>
+        {board.map((entry, i) => (
+          <View key={entry.id} style={[styles.row, styles.boardRow, i > 0 && styles.rowBorder]}>
+            <Text style={[styles.rank, entry.rank === 1 && { color: colors.primary }]}>{entry.rank}</Text>
+            <Avatar id={entry.id} name={entry.name} size={32} />
             <Text style={[styles.boardName, entry.isMe && { color: colors.primary }]} numberOfLines={1}>
-              {entry.isMe ? `${entry.name} (toi)` : entry.name}
+              {entry.name}
+              {entry.isMe ? <Text style={styles.meta}> · toi</Text> : null}
             </Text>
             <Text style={styles.boardSteps}>{formatSteps(entry.steps)}</Text>
           </View>
         ))}
         {friends.length === 0 && (
-          <Text style={styles.empty}>Ajoute des amis avec leur code (onglet Profil) pour les affronter.</Text>
+          <Text style={[styles.meta, { paddingVertical: spacing.md }]}>
+            Ajoute des amis avec leur code (onglet Profil) pour les affronter.
+          </Text>
         )}
       </Card>
     </>
@@ -104,12 +107,12 @@ export default function ChallengesScreen() {
   return (
     <ScrollView style={{ backgroundColor: colors.background }} contentContainerStyle={styles.container}>
       <StatusBanner />
-      <Button title="⚡ Lancer un duel" onPress={() => router.push('/challenge/new')} />
+      <Button title="Nouveau duel" icon="flash" onPress={() => router.push('/challenge/new')} />
 
       <SectionTitle>Mes duels</SectionTitle>
       {sorted.length === 0 ? (
         <Card>
-          <Text style={styles.empty}>Aucun duel pour l’instant. Défie un ami et montre qui marche le plus !</Text>
+          <Text style={styles.meta}>Aucun duel pour l’instant. Défie un ami sur 1, 3 ou 7 jours.</Text>
         </Card>
       ) : (
         <View style={{ gap: spacing.sm }}>
@@ -127,15 +130,16 @@ export default function ChallengesScreen() {
 const styles = StyleSheet.create({
   container: { padding: spacing.md, paddingBottom: spacing.xl },
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  avatar: { fontSize: 32 },
   title: { color: colors.text, ...font.heading },
-  subtitle: { color: colors.textMuted, marginTop: 2, fontWeight: '600' },
-  status: { fontWeight: '900' },
-  bar: { flexDirection: 'row', height: 8, borderRadius: 4, overflow: 'hidden' },
+  status: { fontSize: 13, fontWeight: '700', marginTop: 2 },
+  score: { color: colors.text, fontWeight: '800', fontSize: 15, fontVariant: ['tabular-nums'] },
+  scoreThem: { color: colors.textMuted },
+  bar: { flexDirection: 'row', height: 4, borderRadius: 2, overflow: 'hidden' },
   periods: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.sm },
-  rank: { color: colors.textMuted, fontSize: 18, width: 30, textAlign: 'center', fontWeight: '900' },
-  boardAvatar: { fontSize: 24 },
-  boardName: { color: colors.text, fontSize: 16, fontWeight: '700', flex: 1 },
-  boardSteps: { color: colors.text, fontSize: 16, fontWeight: '900' },
-  empty: { color: colors.textMuted, textAlign: 'center' },
+  boardRow: { paddingVertical: spacing.sm + 2 },
+  rowBorder: { borderTopWidth: 1, borderTopColor: colors.border },
+  rank: { color: colors.textMuted, width: 20, fontSize: 15, fontWeight: '800', fontVariant: ['tabular-nums'] },
+  boardName: { color: colors.text, fontSize: 15, fontWeight: '700', flex: 1 },
+  boardSteps: { color: colors.text, fontSize: 15, fontWeight: '800', fontVariant: ['tabular-nums'] },
+  meta: { color: colors.textMuted, fontSize: 14, fontWeight: '500' },
 });

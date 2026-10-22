@@ -1,13 +1,12 @@
 import { useState } from 'react';
 import { Alert, ScrollView, Share, StyleSheet, Text, TextInput, View } from 'react-native';
 
-import { Button, Card, Chip, SectionTitle, StatusBanner } from '@/components/ui';
+import { Avatar, Button, Card, Chip, SectionTitle, StatusBanner } from '@/components/ui';
 import { requestReminderPermission } from '@/lib/reminders';
 import { useAppStore } from '@/state/AppStore';
-import { colors, formatSteps, radius, spacing } from '@/theme';
+import { colors, font, formatSteps, radius, spacing } from '@/theme';
 
 const GOALS = [5000, 8000, 10000, 15000];
-const AVATARS = ['🏃', '🚶', '🧗', '🚴', '🦸', '🐆', '🦊', '🐺'];
 const REMINDER_HOURS = [12, 18, 19, 20, 21];
 
 function errorMessage(e: unknown) {
@@ -15,7 +14,7 @@ function errorMessage(e: unknown) {
 }
 
 export default function ProfileScreen() {
-  const { mode, profile, updateProfile, friends, addFriend, removeFriend, deleteAccount, settings, setReminderHour } =
+  const { mode, myId, profile, updateProfile, friends, addFriend, removeFriend, deleteAccount, settings, setReminderHour } =
     useAppStore();
   const [friendInput, setFriendInput] = useState('');
   const [busy, setBusy] = useState(false);
@@ -29,7 +28,7 @@ export default function ProfileScreen() {
     try {
       const friend = await addFriend(friendInput);
       setFriendInput('');
-      if (online) Alert.alert('Ami ajouté', `${friend.avatar} ${friend.name} fait maintenant partie de tes amis.`);
+      if (online) Alert.alert('Ami ajouté', `${friend.name} fait maintenant partie de tes amis.`);
     } catch (e) {
       Alert.alert('Ajout impossible', errorMessage(e));
     } finally {
@@ -80,8 +79,22 @@ export default function ProfileScreen() {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+    <ScrollView
+      style={{ backgroundColor: colors.background }}
+      contentContainerStyle={styles.container}
+      keyboardShouldPersistTaps="handled"
+    >
       <StatusBanner />
+
+      <View style={styles.header}>
+        <Avatar id={myId} name={profile.name || '?'} size={56} />
+        <View style={{ flex: 1 }}>
+          <Text style={styles.headerName} numberOfLines={1}>
+            {profile.name}
+          </Text>
+          <Text style={styles.headerMeta}>Objectif {formatSteps(profile.dailyGoal)} pas par jour</Text>
+        </View>
+      </View>
 
       <SectionTitle>Pseudo</SectionTitle>
       <TextInput
@@ -92,13 +105,6 @@ export default function ProfileScreen() {
         placeholderTextColor={colors.textMuted}
         maxLength={20}
       />
-
-      <SectionTitle>Avatar</SectionTitle>
-      <View style={styles.wrap}>
-        {AVATARS.map((a) => (
-          <Chip key={a} label={a} selected={profile.avatar === a} onPress={() => updateProfile({ avatar: a })} />
-        ))}
-      </View>
 
       <SectionTitle>Objectif quotidien</SectionTitle>
       <View style={styles.wrap}>
@@ -122,23 +128,29 @@ export default function ProfileScreen() {
 
       <SectionTitle>Mon code ami</SectionTitle>
       <Card style={styles.codeCard}>
-        <Text style={styles.code}>{profile.friendCode || '······'}</Text>
-        <Text style={styles.muted}>Partage ce code pour que tes amis t’ajoutent.</Text>
-        {online && profile.friendCode ? <Button title="Partager mon code" variant="secondary" onPress={onShareCode} /> : null}
+        <View style={{ flex: 1 }}>
+          <Text style={styles.code}>{profile.friendCode || '······'}</Text>
+          <Text style={styles.small}>Partage ce code pour que tes amis t’ajoutent.</Text>
+        </View>
+        {online && profile.friendCode ? (
+          <Button title="Partager" variant="secondary" icon="share-outline" onPress={onShareCode} />
+        ) : null}
       </Card>
 
       <SectionTitle>Amis ({friends.length})</SectionTitle>
-      <View style={{ gap: spacing.sm }}>
-        {friends.map((f) => (
-          <Card key={f.id} style={styles.friendRow}>
-            <Text style={styles.avatar}>{f.avatar}</Text>
-            <Text style={styles.friendName}>{f.name}</Text>
-            <Text style={styles.remove} onPress={() => onRemoveFriend(f.id, f.name)}>
-              Retirer
-            </Text>
-          </Card>
-        ))}
-      </View>
+      {friends.length > 0 && (
+        <Card style={{ paddingVertical: spacing.xs }}>
+          {friends.map((f, i) => (
+            <View key={f.id} style={[styles.friendRow, i > 0 && styles.rowBorder]}>
+              <Avatar id={f.id} name={f.name} size={32} />
+              <Text style={styles.friendName}>{f.name}</Text>
+              <Text style={styles.remove} onPress={() => onRemoveFriend(f.id, f.name)}>
+                Retirer
+              </Text>
+            </View>
+          ))}
+        </Card>
+      )}
 
       <View style={styles.addRow}>
         <TextInput
@@ -158,7 +170,7 @@ export default function ProfileScreen() {
       {online && (
         <>
           <SectionTitle>Compte</SectionTitle>
-          <Text style={[styles.muted, { textAlign: 'left', marginBottom: spacing.sm }]}>
+          <Text style={[styles.small, { marginBottom: spacing.sm }]}>
             Ton compte est lié à ce téléphone, sans e-mail. Si tu désinstalles l’app, il sera perdu.
           </Text>
           <Button title="Supprimer mon compte" variant="danger" onPress={onDeleteAccount} />
@@ -182,12 +194,15 @@ const styles = StyleSheet.create({
   },
   codeInput: { letterSpacing: 3, fontWeight: '700' },
   wrap: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  codeCard: { alignItems: 'center', gap: spacing.sm },
-  code: { color: colors.primary, fontSize: 32, fontWeight: '800', letterSpacing: 6 },
-  muted: { color: colors.textMuted, textAlign: 'center' },
-  friendRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  avatar: { fontSize: 26 },
-  friendName: { color: colors.text, fontSize: 16, flex: 1 },
+  header: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginTop: spacing.sm },
+  headerName: { color: colors.text, ...font.title },
+  headerMeta: { color: colors.textMuted, fontWeight: '600', marginTop: 2 },
+  codeCard: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  code: { color: colors.text, fontSize: 26, fontWeight: '800', letterSpacing: 4, fontVariant: ['tabular-nums'] },
+  small: { color: colors.textMuted, fontSize: 13, fontWeight: '500', marginTop: 2 },
+  friendRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingVertical: spacing.sm + 2 },
+  rowBorder: { borderTopWidth: 1, borderTopColor: colors.border },
+  friendName: { color: colors.text, fontSize: 15, fontWeight: '700', flex: 1 },
   remove: { color: colors.danger, fontWeight: '600' },
   addRow: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md, alignItems: 'center' },
 });

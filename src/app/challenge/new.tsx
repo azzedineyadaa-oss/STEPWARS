@@ -29,13 +29,13 @@ export default function NewChallengeScreen() {
       const challenge = await createChallenge(opponentId, days);
       router.replace({ pathname: '/challenge/[id]', params: { id: challenge.id } });
     } catch (e) {
-      Alert.alert('Défi non créé', e instanceof Error ? e.message : undefined);
+      Alert.alert('Duel non créé', e instanceof Error ? e.message : undefined);
       setBusy(false);
     }
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <ScrollView style={{ backgroundColor: colors.background }} contentContainerStyle={styles.container}>
       <SectionTitle>Adversaire</SectionTitle>
       {friends.length === 0 ? (
         <Text style={styles.muted}>Ajoute d’abord un ami depuis l’onglet Profil.</Text>
@@ -44,7 +44,7 @@ export default function NewChallengeScreen() {
           {friends.map((f) => (
             <Chip
               key={f.id}
-              label={`${f.avatar} ${f.name}`}
+              label={f.name}
               selected={opponentId === f.id}
               onPress={() => setOpponentId(f.id)}
             />
@@ -60,10 +60,10 @@ export default function NewChallengeScreen() {
       </View>
 
       <Text style={[styles.muted, { marginVertical: spacing.lg }]}>
-        Le défi commence aujourd’hui. Celui ou celle qui fait le plus de pas sur la période gagne.
+        Le duel commence aujourd’hui. Celui ou celle qui totalise le plus de pas sur la période gagne.
       </Text>
 
-      <Button title={busy ? 'Envoi…' : 'Lancer le défi'} onPress={onCreate} disabled={!opponentId || busy} />
+      <Button title={busy ? 'Envoi…' : 'Lancer le duel'} icon="flash" onPress={onCreate} disabled={!opponentId || busy} />
     </ScrollView>
   );
 }

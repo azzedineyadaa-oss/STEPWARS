@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle, Line, Path, Rect } from 'react-native-svg';
 
 import type { MapBubble, PlayersMapHandle } from '@/components/PlayersMap';
+import { Avatar } from '@/components/ui';
 import type { Region } from '@/state/MapStore';
 import { colors, formatCompact, radius } from '@/theme';
 
@@ -65,14 +66,14 @@ export const PlayersMap = forwardRef<PlayersMapHandle, Props>(function PlayersMa
                 onPress={() => onPlayerPress(p.id)}
                 style={[styles.bubble, p.isFriend ? styles.friend : styles.stranger, p.isLeader && styles.leader, { left: x - 60, top: y - 22 }]}
               >
-                <Text style={styles.avatar}>{p.avatar}</Text>
+                <Avatar id={p.id} name={p.name} size={28} />
                 <View>
                   <Text style={styles.name} numberOfLines={1}>
-                    {p.isLeader ? '👑 ' : ''}
                     {p.name}
                   </Text>
                   <Text style={styles.steps}>
-                    {formatCompact(p.stepsToday)} pas{p.goalReached ? ' 🔥' : ''}
+                    {formatCompact(p.stepsToday)}
+                    {p.goalReached ? <Text style={{ color: colors.success }}> ●</Text> : null}
                   </Text>
                 </View>
               </Pressable>
@@ -99,18 +100,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: colors.surface,
-    borderWidth: 2,
+    backgroundColor: 'rgba(20, 20, 22, 0.94)',
+    borderWidth: 1.5,
     borderRadius: radius.pill,
-    paddingVertical: 4,
-    paddingLeft: 4,
+    paddingVertical: 3,
+    paddingLeft: 3,
     paddingRight: 10,
-    maxWidth: 170,
+    maxWidth: 160,
   },
-  friend: { borderColor: colors.secondary },
+  friend: { borderColor: colors.text },
   stranger: { borderColor: colors.border },
-  leader: { borderColor: colors.gold },
-  avatar: { fontSize: 22 },
-  name: { color: colors.text, fontWeight: '800', fontSize: 13 },
-  steps: { color: colors.textMuted, fontSize: 11, fontWeight: '700' },
+  leader: { borderColor: colors.primary },
+  name: { color: colors.text, fontWeight: '700', fontSize: 12 },
+  steps: { color: colors.text, fontSize: 13, fontWeight: '800', fontVariant: ['tabular-nums'] },
 });

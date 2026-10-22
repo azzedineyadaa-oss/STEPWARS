@@ -31,14 +31,14 @@ export async function requestReminderPermission(): Promise<boolean> {
 export function reminderMessage(streak: number, hasTeam: boolean): { title: string; body: string } {
   if (streak >= 2) {
     return {
-      title: `🔥 ${streak} jours de série en jeu`,
+      title: `${streak} jours de série en jeu`,
       body: 'Atteins ton objectif aujourd’hui pour ne pas la perdre.',
     };
   }
   if (hasTeam) {
-    return { title: '⚔️ Ton équipe compte sur toi', body: 'Chaque pas compte dans la guerre de la semaine.' };
+    return { title: 'Ton équipe compte sur toi', body: 'Chaque pas compte dans la guerre de la semaine.' };
   }
-  return { title: '👟 Il est encore temps', body: 'Une petite marche ce soir pour atteindre ton objectif ?' };
+  return { title: 'Il est encore temps', body: 'Une petite marche ce soir pour atteindre ton objectif ?' };
 }
 
 /** Remplace le rappel quotidien (ou le supprime si `hour` est null). */
@@ -54,8 +54,6 @@ export async function scheduleDailyReminder(
   if (Platform.OS === 'android') {
     await Notifications.setNotificationChannelAsync(CHANNEL_ID, {
       name: 'Rappel quotidien',
-      // Exporté via `export *` : le plugin import/namespace ne le voit pas, TypeScript si.
-      // eslint-disable-next-line import/namespace
       importance: Notifications.AndroidImportance.DEFAULT,
     });
   }

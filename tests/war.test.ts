@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 
 import {
   computeStreak,
+  isoWeek,
   memberContribution,
   nextTarget,
   rankByScore,
@@ -69,4 +70,11 @@ test('nextTarget : équipe juste devant et écart pour la dépasser', () => {
   assert.equal(target?.team.id, 'b');
   assert.equal(target?.gap, 2001);
   assert.equal(nextTarget(ranked, 'a'), null);
+});
+
+test('numéro de semaine ISO', () => {
+  assert.equal(isoWeek('2026-10-22'), 43);
+  assert.equal(isoWeek('2026-01-01'), 1);
+  assert.equal(isoWeek('2027-01-01'), 53);
+  assert.equal(isoWeek('2024-12-30'), 1);
 });

@@ -279,3 +279,12 @@ export function demoTeamSteps(team: { id: string; members: number }, days: DayKe
   }
   return total;
 }
+
+/** Numéro de semaine ISO (lundi-dimanche), comme sur un calendrier : « semaine 43 ». */
+export function isoWeek(day: DayKey): number {
+  const date = fromDayKey(day);
+  // Le jeudi de la semaine détermine l'année ISO.
+  const thursday = new Date(date.getFullYear(), date.getMonth(), date.getDate() + 3 - ((date.getDay() + 6) % 7));
+  const firstThursday = new Date(thursday.getFullYear(), 0, 4);
+  return 1 + Math.round(((thursday.getTime() - firstThursday.getTime()) / 86_400_000 - 3 + ((firstThursday.getDay() + 6) % 7)) / 7);
+}

@@ -1,45 +1,69 @@
+// Identité « sport premium » : noir profond, une seule couleur d'accent,
+// gros chiffres, étiquettes en petites capitales. Pas d'emoji dans l'interface.
 export const colors = {
-  background: '#0B0C17',
-  surface: '#171930',
-  surfaceAlt: '#22254A',
-  border: '#2C3060',
-  text: '#F6F6FF',
-  textMuted: '#9A9CC6',
-  primary: '#FF5A36',
-  secondary: '#7C5CFF',
-  success: '#2ED47A',
-  warning: '#FFB020',
-  danger: '#FF4D6A',
-  gold: '#FFC83D',
-  flame: '#FF8A00',
+  background: '#0A0A0B',
+  surface: '#141416',
+  surfaceAlt: '#1D1D20',
+  border: '#2A2A2E',
+  text: '#F5F5F7',
+  textMuted: '#8E8E93',
+  textFaint: '#5A5A60',
+  /** L'unique couleur d'accent : actions, progression, mon équipe. */
+  primary: '#FF5A1F',
+  onPrimary: '#0A0A0B',
+  success: '#30D158',
+  danger: '#FF453A',
+  warning: '#FFD60A',
 };
 
-/** Dégradés de la marque : énergie (orange-rose), guerre (violet), victoire (or). */
-export const gradients = {
-  energy: ['#FF7A3D', '#FF2D78'],
-  war: ['#8B6CFF', '#4A35D6'],
-  victory: ['#FFD54A', '#FF9F1C'],
-  surface: ['#1D2040', '#151730'],
-} as const;
+/** Couleurs des pastilles de joueurs et d'équipes (jamais pour l'interface). */
+export const identityColors = ['#FF5A1F', '#3D8BFF', '#30D158', '#BF5AF2', '#FFD60A', '#64D2FF', '#FF375F', '#C9A26B'];
 
 export const spacing = { xs: 4, sm: 8, md: 16, lg: 24, xl: 32 };
 
-export const radius = { sm: 10, md: 16, lg: 24, pill: 999 };
+export const radius = { sm: 6, md: 10, lg: 14, pill: 999 };
 
 export const font = {
-  hero: { fontSize: 48, fontWeight: '900' as const, letterSpacing: -1.5 },
-  title: { fontSize: 26, fontWeight: '800' as const, letterSpacing: -0.5 },
-  heading: { fontSize: 18, fontWeight: '800' as const },
-  body: { fontSize: 16, fontWeight: '500' as const },
-  caption: { fontSize: 13, fontWeight: '600' as const },
+  /** Gros chiffre principal d'un écran. */
+  display: { fontSize: 60, fontWeight: '800' as const, letterSpacing: -2.5, fontVariant: ['tabular-nums' as const] },
+  /** Chiffre important dans une carte. */
+  number: { fontSize: 28, fontWeight: '800' as const, letterSpacing: -1, fontVariant: ['tabular-nums' as const] },
+  title: { fontSize: 24, fontWeight: '800' as const, letterSpacing: -0.6 },
+  heading: { fontSize: 17, fontWeight: '700' as const, letterSpacing: -0.2 },
+  body: { fontSize: 15, fontWeight: '500' as const },
+  /** Petite étiquette en capitales, au-dessus d'une valeur. */
+  label: { fontSize: 11, fontWeight: '700' as const, letterSpacing: 1.4, textTransform: 'uppercase' as const },
 };
 
 export function formatSteps(steps: number): string {
-  return steps.toLocaleString('fr-FR');
+  // Groupement manuel : selon le moteur, toLocaleString('fr-FR') écrit « 1580 » mais « 6 420 ».
+  const sign = steps < 0 ? '-' : '';
+  return sign + String(Math.round(Math.abs(steps))).replace(/\B(?=(\d{3})+(?!\d))/g, '\u202F');
 }
 
 /** 12 400 → « 12,4 k » pour les espaces étroits. */
 export function formatCompact(steps: number): string {
   if (steps < 10_000) return formatSteps(steps);
   return `${(steps / 1000).toLocaleString('fr-FR', { maximumFractionDigits: 1 })} k`;
+}
+
+function hash(text: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < text.length; i++) {
+    h ^= text.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+}
+
+/** Couleur stable d'un joueur ou d'une équipe. */
+export function identityColor(id: string): string {
+  return identityColors[hash(id) % identityColors.length];
+}
+
+/** « Azzedine » → « A », « Les Fusées » → « LF ». */
+export function initials(name: string, max = 1): string {
+  const words = name.trim().split(/\s+/).filter(Boolean);
+  const letters = (words.length > 1 ? words.map((w) => w[0]) : [...(words[0] ?? '?')]).slice(0, max);
+  return letters.join('').toUpperCase() || '?';
 }
