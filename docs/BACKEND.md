@@ -47,7 +47,7 @@ Les deux valeurs du projet de production sont dans `.env`, versionné : elles so
 
 Ces deux valeurs sont **publiques** : elles se retrouvent dans l'app installée, et c'est prévu ainsi. La sécurité repose sur les règles de la base. Ne mettez **jamais** la clé `secret` ou `service_role` dans l'app.
 
-**Mettre à jour un projet existant :** collez dans le SQL Editor les migrations ajoutées depuis la dernière mise en place, dans l'ordre. Le projet de production a reçu `setup.sql` jusqu'à `20261025000000_anticheat.sql` : `supabase/update-2026-10-22.sql` regroupe les trois suivantes.
+**Mettre à jour un projet existant :** collez dans le SQL Editor les migrations ajoutées depuis la dernière mise en place, dans l'ordre. Le projet de production a reçu `setup.sql` jusqu'à `20261025000000_anticheat.sql` : `supabase/update-2026-10-22.sql` regroupe les trois suivantes. Ensuite, `supabase/update-2026-10-23.sql` (correctif de sécurité : un joueur pouvait créer un duel déjà accepté) ; il peut être recollé sans risque.
 
 ### Comptes par e-mail (code à 6 chiffres)
 

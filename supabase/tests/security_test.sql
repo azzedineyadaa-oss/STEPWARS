@@ -105,3 +105,12 @@ select pg_temp.check((select count(*) = 0 from public.daily_steps where user_id 
 select pg_temp.check((select count(*) = 0 from public.friendships), 'amitiés supprimées');
 
 \echo 'Tous les tests de sécurité passent.'
+
+-- Aucun joueur ne peut vider une table ni écrire hors des colonnes prévues.
+select pg_temp.check(
+  not exists (
+    select 1 from information_schema.role_table_grants
+    where grantee in ('anon', 'authenticated') and table_schema = 'public' and privilege_type in ('TRUNCATE', 'UPDATE', 'INSERT')
+  ),
+  'pas de droit d''écriture global ni de TRUNCATE pour les joueurs'
+);

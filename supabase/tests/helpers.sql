@@ -11,12 +11,19 @@ begin
 end $$;
 
 create function pg_temp.expect_error(sql text, fragment text) returns void language plpgsql as $$
+declare
+  failed boolean := false;
 begin
-  execute sql;
-  raise exception 'ATTENDU une erreur « % » pour : %', fragment, sql;
-exception when others then
-  if sqlerrm not like '%' || fragment || '%' then
-    raise exception 'Mauvaise erreur pour % : % (attendu « % »)', sql, sqlerrm, fragment;
+  begin
+    execute sql;
+  exception when others then
+    failed := true;
+    if sqlerrm not like '%' || fragment || '%' then
+      raise exception 'Mauvaise erreur pour % : % (attendu « % »)', sql, sqlerrm, fragment;
+    end if;
+  end;
+  if not failed then
+    raise exception 'ATTENDU une erreur « % » pour : %', fragment, sql;
   end if;
 end $$;
 
